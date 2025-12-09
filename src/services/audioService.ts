@@ -142,7 +142,7 @@ export class AudioService {
         // Ramp frequency down quickly for the "pew" sound
         laser.frequency.exponentialRampTo("C2", 0.3, now);
         // Clean up
-        laser.stop(now + 0.3);
+        laser.triggerRelease(now + 0.3);
         setTimeout(() => laser.dispose(), 500);
     }
 }
