@@ -277,7 +277,7 @@ const App = () => {
                 {mintedRegion && <MintSuccessModal region={mintedRegion} onClose={() => setMintedRegion(null)} />}
 
                 {/* Zoom Slider */}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/80 border border-[#333] rounded p-3 py-4 flex flex-col items-center gap-2 z-20 h-36 backdrop-blur-sm overflow-hidden">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/80 border border-[#333] rounded p-3 pt-4 pb-6 flex flex-col items-center gap-2 z-20 h-40 backdrop-blur-sm">
                     <div className="text-[10px] text-white"><i className="fa-solid fa-plus"></i></div>
                     <input 
                         type="range" 
