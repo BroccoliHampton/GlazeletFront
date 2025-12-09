@@ -1,13 +1,13 @@
-
 import React from 'react';
 import { Territory } from '../types';
 
 interface MintSuccessModalProps {
     region: Territory;
     onClose: () => void;
+    onShare?: () => void;
 }
 
-export const MintSuccessModal: React.FC<MintSuccessModalProps> = ({ region, onClose }) => {
+export const MintSuccessModal: React.FC<MintSuccessModalProps> = ({ region, onClose, onShare }) => {
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
             <div className="w-full max-w-sm bg-[#0a0a0a] border border-[#ec4899] rounded-xl p-1 shadow-[0_0_50px_rgba(236,72,153,0.3)] relative overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
@@ -71,13 +71,24 @@ export const MintSuccessModal: React.FC<MintSuccessModalProps> = ({ region, onCl
                         </div>
                     </div>
 
-                    {/* Action */}
-                    <button 
-                        onClick={onClose}
-                        className="w-full py-3.5 bg-[#ec4899] hover:bg-[#d63384] text-white font-bold rounded-lg font-brand tracking-widest uppercase transition-all shadow-[0_0_20px_rgba(236,72,153,0.3)] active:scale-[0.98]"
-                    >
-                        CONTINUE
-                    </button>
+                    {/* Actions */}
+                    <div className="flex gap-3 w-full">
+                        {onShare && (
+                            <button 
+                                onClick={onShare}
+                                className="flex-1 py-3.5 bg-[#111] hover:bg-[#222] text-white font-bold rounded-lg font-tech tracking-widest uppercase transition-all border border-[#333] hover:border-[#ec4899]"
+                            >
+                                <i className="fa-solid fa-share-nodes mr-2"></i>
+                                SHARE
+                            </button>
+                        )}
+                        <button 
+                            onClick={onClose}
+                            className={`${onShare ? 'flex-1' : 'w-full'} py-3.5 bg-[#ec4899] hover:bg-[#d63384] text-white font-bold rounded-lg font-brand tracking-widest uppercase transition-all shadow-[0_0_20px_rgba(236,72,153,0.3)] active:scale-[0.98]`}
+                        >
+                            CONTINUE
+                        </button>
+                    </div>
 
                 </div>
             </div>
