@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
-import type { MiniAppContext } from '@farcaster/miniapp-sdk'
+
+interface FarcasterUser {
+  fid: number
+  username?: string
+  displayName?: string
+  pfpUrl?: string
+}
 
 interface FarcasterState {
   isSDKLoaded: boolean
   isInMiniApp: boolean
-  context: MiniAppContext | null
+  context: typeof sdk.context | null
   error: string | null
 }
 
@@ -115,6 +121,9 @@ export function useFarcaster() {
     }
   }, [state.isInMiniApp])
 
+  // Extract user from context
+  const user: FarcasterUser | null = state.context?.user ?? null
+
   return {
     ...state,
     ready,
@@ -123,7 +132,7 @@ export function useFarcaster() {
     viewProfile,
     close,
     // Expose user info directly for convenience
-    user: state.context?.user ?? null,
+    user,
     clientAdded: state.context?.client?.added ?? false,
   }
 }
