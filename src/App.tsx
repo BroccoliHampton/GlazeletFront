@@ -277,17 +277,17 @@ const App = () => {
                 {mintedRegion && <MintSuccessModal region={mintedRegion} onClose={() => setMintedRegion(null)} />}
 
                 {/* Zoom Slider */}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/80 border border-[#333] rounded p-3 pt-4 pb-8 flex flex-col items-center gap-2 z-20 h-44 backdrop-blur-sm">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/80 border border-[#333] rounded p-3 py-4 flex flex-col items-center gap-3 z-20 backdrop-blur-sm">
                     <div className="text-[10px] text-white"><i className="fa-solid fa-plus"></i></div>
-                    <input 
-                        type="range" 
-                        {...({ orient: "vertical" } as any)}
-                        min="1" max="3.5" step="0.1" 
-                        value={zoom}
-                        onChange={(e) => setZoom(parseFloat(e.target.value))}
-                        className="flex-1 w-2 accent-[#ec4899]"
-                        style={{ WebkitAppearance: 'slider-vertical' } as any}
-                    />
+                   <input 
+    type="range" 
+    {...({ orient: "vertical" } as any)}
+    min="1" max="3.5" step="0.1" 
+    value={zoom}
+    onChange={(e) => setZoom(parseFloat(e.target.value))}
+    className="h-24 w-2 accent-[#ec4899]"
+    style={{ WebkitAppearance: 'slider-vertical' } as any}
+/>
                     <div className="text-[10px] text-white"><i className="fa-solid fa-minus"></i></div>
                 </div>
 
