@@ -558,7 +558,7 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                     clientY = e.clientY;
                 } 
 
-                if (clientX !== undefined) {
+                if (clientX !== undefined && clientY !== undefined) {
                     const rect = canvas.getBoundingClientRect();
                     const mx = clientX - rect.left;
                     const my = clientY - rect.top;
