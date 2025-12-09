@@ -10,11 +10,16 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@farcaster/miniapp-sdk": "^0.0.61",
+    "@farcaster/miniapp-wagmi-connector": "^0.0.1",
+    "@tanstack/react-query": "^5.51.1",
     "d3": "^7.8.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tone": "^14.7.77",
-    "topojson-client": "^3.1.0"
+    "topojson-client": "^3.1.0",
+    "viem": "^2.17.0",
+    "wagmi": "^2.12.0"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
