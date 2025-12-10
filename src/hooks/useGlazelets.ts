@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAccount, useReadContract, useWriteContract } from 'wagmi'
-import { parseUnits, formatUnits } from 'viem'
+import { formatUnits } from 'viem'
 import { CONTRACTS, MINT_CONFIG, ERC20_ABI, GLAZELETS_ABI } from '../config/wagmi'
 
 export type MintStatus = 'idle' | 'approving' | 'minting' | 'success' | 'error'
@@ -10,6 +10,13 @@ export function useGlazelets() {
   const [mintStatus, setMintStatus] = useState<MintStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lastTxHash, setLastTxHash] = useState<`0x${string}` | null>(null)
+
+  // Read mint price from contract
+  const { data: mintPriceWei } = useReadContract({
+    address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
+    abi: GLAZELETS_ABI,
+    functionName: 'mintPrice',
+  })
 
   // Read DONUT balance
   const { data: donutBalance, refetch: refetchBalance } = useReadContract({
@@ -59,15 +66,16 @@ export function useGlazelets() {
     ? parseFloat(formatUnits(donutBalance, MINT_CONFIG.PRICE_DONUT_DECIMALS))
     : 0
 
+  // Format mint price for display
+  const mintPriceFormatted = mintPriceWei 
+    ? parseFloat(formatUnits(mintPriceWei, MINT_CONFIG.PRICE_DONUT_DECIMALS))
+    : 0
+
   // Check if user has enough DONUT
-  const mintPriceWei = parseUnits(
-    MINT_CONFIG.PRICE_DONUT.toString(), 
-    MINT_CONFIG.PRICE_DONUT_DECIMALS
-  )
-  const hasEnoughDonut = donutBalance ? donutBalance >= mintPriceWei : false
+  const hasEnoughDonut = (donutBalance && mintPriceWei) ? donutBalance >= mintPriceWei : false
   
   // Check if approval is needed
-  const needsApproval = donutAllowance ? donutAllowance < mintPriceWei : true
+  const needsApproval = (donutAllowance && mintPriceWei) ? donutAllowance < mintPriceWei : true
 
   // Check if user can mint (hasn't hit wallet limit)
   const canMint = userMintCount !== undefined 
@@ -83,6 +91,11 @@ export function useGlazelets() {
   const mint = useCallback(async (regionName: string) => {
     if (!address || !isConnected) {
       setError('Wallet not connected')
+      return
+    }
+
+    if (!mintPriceWei) {
+      setError('Could not read mint price')
       return
     }
 
@@ -194,8 +207,8 @@ export function useGlazelets() {
     lastTxHash,
     reset,
     
-    // Config
-    mintPrice: Number(MINT_CONFIG.PRICE_DONUT),
+    // Config - now reading price from contract
+    mintPrice: mintPriceFormatted,
     maxSupply: MINT_CONFIG.MAX_SUPPLY,
     maxPerWallet: MINT_CONFIG.MAX_PER_WALLET,
   }
