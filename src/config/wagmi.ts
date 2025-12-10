@@ -4,8 +4,8 @@ import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector'
 
 // Contract addresses - UPDATE THESE after deployment
 export const CONTRACTS = {
-  DONUT_TOKEN: '0x0000000000000000000000000000000000000000', // TODO: Add DONUT token address on Base
-  GLAZELETS_NFT: '0x0000000000000000000000000000000000000000', // TODO: Add after contract deployment
+  DONUT_TOKEN: '0xae4a37d554c6d6f3e398546d8566b25052e0169c', // TODO: Add DONUT token address on Base
+  GLAZELETS_NFT: '0xef5C67d9353fD3411e6e6b358A3dE162c2ABE0b3', // TODO: Add after contract deployment
   BURN_ADDRESS: '0x000000000000000000000000000000000000dEaD',
 } as const
 
