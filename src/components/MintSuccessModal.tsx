@@ -3,11 +3,12 @@ import { Territory } from '../types';
 
 interface MintSuccessModalProps {
     region: Territory;
+    txHash?: `0x${string}` | null;
     onClose: () => void;
     onShare?: () => void;
 }
 
-export const MintSuccessModal: React.FC<MintSuccessModalProps> = ({ region, onClose, onShare }) => {
+export const MintSuccessModal: React.FC<MintSuccessModalProps> = ({ region, txHash, onClose, onShare }) => {
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 p-4">
             <div className="w-full max-w-sm bg-[#0a0a0a] border border-[#ec4899] rounded-xl p-1 shadow-[0_0_50px_rgba(236,72,153,0.3)] relative overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
@@ -32,44 +33,41 @@ export const MintSuccessModal: React.FC<MintSuccessModalProps> = ({ region, onCl
                             MINT SUCCESS
                         </div>
                         <div className="text-[10px] font-tech text-gray-400 uppercase tracking-[0.2em]">
-                            New Glazelet Discovered
+                            Glazelet Extracted
                         </div>
                     </div>
 
-                    {/* Image Card */}
-                    <div className="relative w-56 h-56 mb-8 group">
-                        {/* Spinning border effect */}
-                        <div className="absolute -inset-1 bg-gradient-to-r from-[#ec4899] via-purple-600 to-[#ec4899] rounded-xl opacity-75 blur opacity-40 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-                        
-                        <div className="relative w-full h-full bg-black rounded-lg border border-[#333] overflow-hidden flex items-center justify-center p-4">
-                            {/* Starburst BG */}
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#ec4899]/20 via-transparent to-transparent"></div>
-                            
-                            <img 
-                                src="https://i.imgur.com/3FvzKre.png" 
-                                alt="Glazelet" 
-                                className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-[bounce_3s_infinite]"
-                            />
+                    {/* Success Animation */}
+                    <div className="relative w-32 h-32 mb-6">
+                        <div className="absolute inset-0 bg-[#ec4899]/20 rounded-full animate-ping"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-24 h-24 bg-gradient-to-br from-[#ec4899] to-purple-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(236,72,153,0.5)]">
+                                <i className="fa-solid fa-check text-white text-4xl"></i>
+                            </div>
                         </div>
-                        
-                        {/* Region Badge */}
-                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-[#ec4899] text-white text-[10px] font-bold px-4 py-1.5 rounded-full font-tech uppercase whitespace-nowrap shadow-[0_0_10px_#ec4899] border border-white/20">
-                            <i className="fa-solid fa-location-dot mr-1.5"></i>
+                    </div>
+
+                    {/* Region Info */}
+                    <div className="bg-[#111] border border-[#333] rounded-lg p-4 w-full mb-4">
+                        <div className="text-[10px] text-gray-500 uppercase font-tech mb-1">Origin Region</div>
+                        <div className="text-white font-bold font-brand text-lg flex items-center justify-center gap-2">
+                            <i className="fa-solid fa-location-dot text-[#ec4899]"></i>
                             {region.name}
                         </div>
                     </div>
 
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-3 w-full mb-6">
-                        <div className="bg-[#111] rounded-lg p-2 border border-[#333] flex flex-col items-center">
-                            <div className="text-[9px] text-gray-500 uppercase font-tech mb-1">Rarity</div>
-                            <div className="text-white font-bold font-brand text-xs">COMMON</div>
-                        </div>
-                        <div className="bg-[#111] rounded-lg p-2 border border-[#333] flex flex-col items-center">
-                            <div className="text-[9px] text-gray-500 uppercase font-tech mb-1">Serial</div>
-                            <div className="text-[#ec4899] font-bold font-brand text-xs">#{Math.floor(Math.random() * 800) + 1}</div>
-                        </div>
-                    </div>
+                    {/* Transaction Link */}
+                    {txHash && (
+                        <a 
+                            href={`https://basescan.org/tx/${txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-gray-500 hover:text-[#ec4899] transition-colors mb-4 flex items-center gap-1"
+                        >
+                            <i className="fa-solid fa-external-link"></i>
+                            View on BaseScan
+                        </a>
+                    )}
 
                     {/* Actions */}
                     <div className="flex gap-3 w-full">
