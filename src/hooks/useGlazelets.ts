@@ -18,7 +18,7 @@ export function useGlazelets() {
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && CONTRACTS.DONUT_TOKEN !== '0x0000000000000000000000000000000000000000',
+      enabled: !!address,
     },
   })
 
@@ -29,7 +29,7 @@ export function useGlazelets() {
     functionName: 'allowance',
     args: address ? [address, CONTRACTS.GLAZELETS_NFT as `0x${string}`] : undefined,
     query: {
-      enabled: !!address && CONTRACTS.DONUT_TOKEN !== '0x0000000000000000000000000000000000000000',
+      enabled: !!address,
     },
   })
 
@@ -38,9 +38,6 @@ export function useGlazelets() {
     address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
     abi: GLAZELETS_ABI,
     functionName: 'totalSupply',
-    query: {
-      enabled: CONTRACTS.GLAZELETS_NFT !== '0x0000000000000000000000000000000000000000',
-    },
   })
 
   // Read user's mint count
@@ -50,7 +47,7 @@ export function useGlazelets() {
     functionName: 'mintsPerWallet',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && CONTRACTS.GLAZELETS_NFT !== '0x0000000000000000000000000000000000000000',
+      enabled: !!address,
     },
   })
 
