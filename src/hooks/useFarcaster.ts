@@ -8,10 +8,19 @@ interface FarcasterUser {
   pfpUrl?: string
 }
 
+interface FarcasterClient {
+  added?: boolean
+}
+
+interface FarcasterContext {
+  user?: FarcasterUser
+  client?: FarcasterClient
+}
+
 interface FarcasterState {
   isSDKLoaded: boolean
   isInMiniApp: boolean
-  context: typeof sdk.context | null
+  context: FarcasterContext | null
   error: string | null
 }
 
@@ -30,13 +39,13 @@ export function useFarcaster() {
         const inMiniApp = await sdk.isInMiniApp()
         
         if (inMiniApp) {
-          // Get context (user info, client info, etc.)
-          const context = sdk.context
+          // Get context (user info, client info, etc.) - now returns a Promise
+          const context = await sdk.context
           
           setState({
             isSDKLoaded: true,
             isInMiniApp: true,
-            context,
+            context: context as FarcasterContext,
             error: null,
           })
         } else {
@@ -121,9 +130,6 @@ export function useFarcaster() {
     }
   }, [state.isInMiniApp])
 
-  // Extract user from context
-  const user: FarcasterUser | null = state.context?.user ?? null
-
   return {
     ...state,
     ready,
@@ -132,7 +138,7 @@ export function useFarcaster() {
     viewProfile,
     close,
     // Expose user info directly for convenience
-    user,
+    user: state.context?.user ?? null,
     clientAdded: state.context?.client?.added ?? false,
   }
 }
