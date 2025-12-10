@@ -1,4 +1,3 @@
-
 export interface Region {
   id: string;
   name: string;
@@ -9,13 +8,7 @@ export interface Region {
 export interface Territory extends Region {
   baseColor: string;
   owner: 'player' | null;
-  price: number;
-  multiplier: string;
-  extracted: number;
-  pnl: string;
-  cooldownEnd: number;
-  mints: number; 
-  lastMintTime?: number; // Optional for tracking flash animation
+  lastMintTime?: number; // For flash animation after successful mint
 }
 
 export interface GlobeDot {
@@ -27,7 +20,8 @@ export interface GlobeDot {
   sprinkleColor: string;
 }
 
-export type ViewMode = 'territories' | 'minted';
+// Removed 'minted' view mode - will add back when hooked up to real data
+export type ViewMode = 'territories';
 
 export interface GameEffect {
   targetId: string;
