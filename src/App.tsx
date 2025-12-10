@@ -33,11 +33,14 @@ const App = () => {
     error: mintError,
     mintPrice,
     maxSupply,
+    lastTxHash,
+    reset: resetMintStatus,
   } = useGlazelets();
 
   // --- Game State ---
   const [showInfoPopup, setShowInfoPopup] = useState(false);
   const [mintedRegion, setMintedRegion] = useState<Territory | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Derive wallet status from connection state
   const walletStatus: 'checking' | 'eligible' | 'denied' = 
@@ -88,6 +91,13 @@ const App = () => {
       }
     }
   }, [isSDKLoaded, isInMiniApp, isConnected, connectors, connect, farcasterReady]);
+
+  // --- Show success modal when mint succeeds ---
+  useEffect(() => {
+    if (mintStatus === 'success' && mintedRegion) {
+      setShowSuccessModal(true);
+    }
+  }, [mintStatus, mintedRegion]);
 
   // --- Game Loop (Time & Effects) ---
   useEffect(() => {
@@ -153,7 +163,10 @@ const App = () => {
     const region = territories[selectedRegionId];
     if (!region) return;
 
-    // Trigger Laser Effect immediately for visual feedback
+    // Store the region being minted
+    setMintedRegion(region);
+
+    // Trigger Laser Effect for visual feedback
     const newEffect: GameEffect = {
       targetId: selectedRegionId,
       startTime: Date.now(),
@@ -172,43 +185,45 @@ const App = () => {
       }
     }, 0);
 
-    // Execute the actual mint
-    const txHash = await mint(region.name);
-    
-    if (txHash) {
-      // Mint successful - will be handled by onInfectComplete
-    } else if (mintError) {
-      // Show error (could add a toast notification here)
-      console.error('Mint failed:', mintError);
-    }
+    // Execute the actual mint - success modal will show via useEffect when mintStatus === 'success'
+    await mint(region.name);
   };
 
+  // Called when laser animation completes - just update visual state
   const onInfectComplete = useCallback((id: string) => {
     setTerritories(prev => {
-      const updatedTerritory: Territory = {
-        ...prev[id], 
-        owner: 'player',
-        mints: prev[id].mints + 1,
-        lastMintTime: Date.now()
-      };
-      
-      setTimeout(() => {
-        setMintedRegion(updatedTerritory);
-      }, 1500);
-
-      return { ...prev, [id]: updatedTerritory };
+      if (mintStatus === 'success') {
+        return {
+          ...prev,
+          [id]: {
+            ...prev[id],
+            owner: 'player',
+            mints: prev[id].mints + 1,
+            lastMintTime: Date.now()
+          }
+        };
+      }
+      return prev;
     });
-  }, []);
+  }, [mintStatus]);
+
+  // Handle closing success modal
+  const handleCloseSuccessModal = useCallback(() => {
+    setShowSuccessModal(false);
+    setMintedRegion(null);
+    resetMintStatus();
+  }, [resetMintStatus]);
 
   // Handle sharing after successful mint
   const handleShare = useCallback(() => {
     if (mintedRegion) {
+      const txLink = lastTxHash ? `\n\nhttps://basescan.org/tx/${lastTxHash}` : '';
       composeCast(
-        `🍩 Just extracted a Glazelet from ${mintedRegion.name}! \n\nBurn 69 $DONUT to mint yours:`,
+        `🍩 Just extracted a Glazelet from ${mintedRegion.name}!${txLink}\n\nMint yours:`,
         'https://glazeworld.vercel.app'
       );
     }
-  }, [mintedRegion, composeCast]);
+  }, [mintedRegion, lastTxHash, composeCast]);
 
   // --- Render Helpers ---
   const activeRegion = selectedRegionId ? territories[selectedRegionId] : (hoveredRegionId ? territories[hoveredRegionId] : null);
@@ -328,10 +343,11 @@ const App = () => {
 
           {/* Overlays */}
           {showInfoPopup && <InfoPopup onClose={() => setShowInfoPopup(false)} />}
-          {mintedRegion && (
+          {showSuccessModal && mintedRegion && (
             <MintSuccessModal 
-              region={mintedRegion} 
-              onClose={() => setMintedRegion(null)}
+              region={mintedRegion}
+              txHash={lastTxHash}
+              onClose={handleCloseSuccessModal}
               onShare={handleShare}
             />
           )}
