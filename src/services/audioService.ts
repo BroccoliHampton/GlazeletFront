@@ -141,7 +141,7 @@ export class AudioService {
         laser.triggerAttack("C6", now);
         // Ramp frequency down quickly for the "pew" sound
         laser.frequency.exponentialRampTo("C2", 0.3, now);
-        // Clean up
+        // Clean up - use triggerRelease instead of stop
         laser.triggerRelease(now + 0.3);
         setTimeout(() => laser.dispose(), 500);
     }
