@@ -51,19 +51,12 @@ const App = () => {
   // Initialize Territories
   const [territories, setTerritories] = useState<Record<string, Territory>>(() => {
     const initial: Record<string, Territory> = {};
-    const currentTime = Date.now();
     RISK_REGIONS.forEach((r) => {
       const lightness = Math.floor(Math.random() * 40) + 20;
       initial[r.id] = {
         ...r,
         baseColor: `hsl(0, 0%, ${lightness}%)`,
         owner: null,
-        price: 500,
-        multiplier: (Math.random() * 5 + 1).toFixed(1),
-        extracted: parseFloat((Math.random() * 800 + 50).toFixed(2)),
-        pnl: (Math.random() > 0.4 ? "+" : "-") + (Math.random() * 25).toFixed(1) + "%",
-        cooldownEnd: currentTime + Math.floor(Math.random() * 24 * 60 * 60 * 1000),
-        mints: Math.floor(Math.random() * 300)
       };
     });
     return initial;
@@ -71,7 +64,7 @@ const App = () => {
 
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('territories');
+  const viewMode: ViewMode = 'territories'; // Will add toggle back when hooked to real data
   const [zoom, setZoom] = useState(1.8);
   const [effects, setEffects] = useState<GameEffect[]>([]);
   
@@ -99,7 +92,7 @@ const App = () => {
     }
   }, [mintStatus, mintedRegion]);
 
-  // --- Game Loop (Time & Effects) ---
+  // --- Game Loop (Effects Cleanup) ---
   useEffect(() => {
     const interval = setInterval(() => {
       const currentTime = Date.now();
@@ -108,22 +101,6 @@ const App = () => {
       setEffects(prev => {
         if (prev.length === 0) return prev;
         return prev.filter(e => currentTime - e.startTime < e.duration + 500);
-      });
-
-      // Reset cooldowns (simulation logic)
-      setTerritories(prev => {
-        let changed = false;
-        const next = { ...prev };
-        Object.keys(next).forEach(key => {
-          if (next[key].cooldownEnd < currentTime) {
-            next[key] = {
-              ...next[key],
-              cooldownEnd: currentTime + 24 * 60 * 60 * 1000
-            };
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
       });
     }, 500);
     return () => clearInterval(interval);
@@ -163,10 +140,10 @@ const App = () => {
     const region = territories[selectedRegionId];
     if (!region) return;
 
-    // Store the region being minted
+    // Store the region being minted (for success modal)
     setMintedRegion(region);
 
-    // Trigger Laser Effect for visual feedback
+    // Trigger Laser Effect immediately for visual feedback
     const newEffect: GameEffect = {
       targetId: selectedRegionId,
       startTime: Date.now(),
@@ -189,22 +166,18 @@ const App = () => {
     await mint(region.name);
   };
 
-  // Called when laser animation completes - just update visual state
   const onInfectComplete = useCallback((id: string) => {
-    setTerritories(prev => {
-      if (mintStatus === 'success') {
-        return {
-          ...prev,
-          [id]: {
-            ...prev[id],
-            owner: 'player',
-            mints: prev[id].mints + 1,
-            lastMintTime: Date.now()
-          }
-        };
-      }
-      return prev;
-    });
+    // Only update visual state after laser animation - success modal is triggered by mintStatus
+    if (mintStatus === 'success') {
+      setTerritories(prev => ({
+        ...prev,
+        [id]: {
+          ...prev[id], 
+          owner: 'player',
+          lastMintTime: Date.now()
+        }
+      }));
+    }
   }, [mintStatus]);
 
   // Handle closing success modal
@@ -371,26 +344,12 @@ const App = () => {
           {activeRegion && (
             <div className="absolute top-4 left-4 z-30 bg-black/90 border border-[#ec4899] p-2 rounded backdrop-blur-md text-xs font-tech pointer-events-none shadow-[0_0_15px_rgba(236,72,153,0.3)]">
               <div className="text-white font-bold uppercase tracking-widest mb-1">{activeRegion.name}</div>
-              <div className="text-white font-tech text-[10px] mb-1">
-                MINTS: <span className="text-[#ec4899] font-bold">{activeRegion.mints}</span>
-              </div>
               <div className={`text-[#ec4899] ${selectedRegionId === activeRegion.id ? 'animate-pulse font-bold' : ''}`}>
                 {selectedRegionId === activeRegion.id ? 'READY TO EXTRACT' : 'SCANNING...'}
               </div>
             </div>
           )}
 
-          {/* Legend (Visible when viewing Mint Volume) */}
-          {viewMode === 'minted' && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none w-64">
-              <div className="text-[10px] text-white font-bold font-tech mb-1 uppercase tracking-widest shadow-black drop-shadow-md">Mint Volume</div>
-              <div className="w-48 h-3 rounded border border-white/30 shadow-lg"
-                   style={{ background: 'linear-gradient(90deg, hsl(260, 50%, 30%) 0%, hsl(300, 60%, 50%) 50%, hsl(0, 0%, 100%) 100%)' }} />
-              <div className="w-52 flex justify-between text-[9px] text-white font-bold font-tech mt-1 px-1 drop-shadow-md">
-                <span>LOW</span><span>HIGH</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Bottom Stats Grid */}
@@ -426,19 +385,12 @@ const App = () => {
           </div>
         </div>
 
-        {/* Footer Action Buttons */}
+        {/* Footer Action Button */}
         <div className="p-4 flex gap-3 items-center z-40 relative bg-black border-t border-[#333] shrink-0">
-          <button 
-            onClick={() => setViewMode(viewMode === 'territories' ? 'minted' : 'territories')}
-            className="flex-1 bg-[#111] text-white border border-[#333] rounded h-12 font-tech text-base uppercase hover:bg-[#222] hover:border-white transition-all tracking-widest"
-          >
-            VIEW: {viewMode === 'territories' ? 'REGIONS' : 'MINTS'}
-          </button>
-          
           <button 
             disabled={buttonDisabled}
             onClick={(e) => { e.stopPropagation(); handleExtract(); }}
-            className={`flex-1 rounded h-12 font-brand text-lg font-bold uppercase transition-all tracking-widest 
+            className={`w-full rounded h-12 font-brand text-lg font-bold uppercase transition-all tracking-widest 
               ${buttonDisabled
                 ? 'bg-[#111] text-[#333] border border-[#222] cursor-not-allowed' 
                 : 'bg-[#ec4899] text-white border-none hover:brightness-110 active:translate-y-px active:shadow-[0_0_20px_#ec4899]'
