@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 // @ts-ignore
@@ -253,20 +252,8 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                         let color = dot.baseColor; 
                         let size = 1.3 * zoom;
 
-                        // View Mode Logic
-                        if (viewMode === 'minted') {
-                            const maxMints = 500; 
-                            const val = Math.min(rData.mints / maxMints, 1);
-                            
-                            if (val < 0.5) {
-                                const t = val * 2;
-                                const h = 260 + (t * 40); 
-                                color = `hsl(${h}, 50%, ${30 + t * 20}%)`;
-                            } else {
-                                const t = (val - 0.5) * 2;
-                                color = `hsl(320, ${80 + t * 20}%, ${50 + t * 50}%)`;
-                            }
-                        }
+                        // View Mode Logic - simplified (minted view removed until real data)
+                        // Default territories view just uses baseColor
 
                         // REMOVE PERMANENT PINK to allow fade effect
                         /*
