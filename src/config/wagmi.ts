@@ -2,16 +2,16 @@ import { http, createConfig } from 'wagmi'
 import { base } from 'wagmi/chains'
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector'
 
-// Contract addresses - UPDATE THESE after deployment
+// Contract addresses
 export const CONTRACTS = {
-  DONUT_TOKEN: '0xae4a37d554c6d6f3e398546d8566b25052e0169c', // TODO: Add DONUT token address on Base
-  GLAZELETS_NFT: '0xef5C67d9353fD3411e6e6b358A3dE162c2ABE0b3', // TODO: Add after contract deployment
+  DONUT_TOKEN: '0xae4a37d554c6d6f3e398546d8566b25052e0169c',
+  GLAZELETS_NFT: '0xef5C67d9353fD3411e6e6b358A3dE162c2ABE0b3',
   BURN_ADDRESS: '0x000000000000000000000000000000000000dEaD',
 } as const
 
 // Mint configuration
 export const MINT_CONFIG = {
-  PRICE_DONUT: 69n, // 69 DONUT tokens
+  PRICE_DONUT: 69n,
   PRICE_DONUT_DECIMALS: 18,
   MAX_SUPPLY: 808,
   MAX_PER_WALLET: 4,
@@ -59,7 +59,7 @@ export const ERC20_ABI = [
   },
 ] as const
 
-// Glazelets NFT ABI
+// Glazelets NFT ABI (ERC721Enumerable)
 export const GLAZELETS_ABI = [
   {
     name: 'mint',
@@ -88,5 +88,36 @@ export const GLAZELETS_ABI = [
     stateMutability: 'view',
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'owner', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'tokenOfOwnerByIndex',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'index', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'tokenURI',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string' }],
+  },
+  {
+    name: 'tokenIdToOrigin',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string' }],
   },
 ] as const
