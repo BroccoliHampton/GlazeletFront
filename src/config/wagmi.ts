@@ -113,11 +113,4 @@ export const GLAZELETS_ABI = [
     inputs: [{ name: 'tokenId', type: 'uint256' }],
     outputs: [{ name: '', type: 'string' }],
   },
-  {
-    name: 'tokenIdToOrigin',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'tokenId', type: 'uint256' }],
-    outputs: [{ name: '', type: 'string' }],
-  },
 ] as const
