@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { CONTRACTS, GLAZELETS_ABI } from '../config/wagmi';
 
@@ -6,141 +6,71 @@ interface InfoPopupProps {
     onClose: () => void;
 }
 
-interface NFTData {
-    tokenId: number;
-    origin: string;
-    image: string | null;
-    name: string;
-}
+const IPFS_BASE = 'https://ipfs.io/ipfs/bafybeihq3g6pg2nh4rvifpkvbjnvsvvdgyvaequhrmbnvyc42zxucdlqw4';
+
+// Add ownerOf to check token ownership
+const EXTENDED_ABI = [
+    ...GLAZELETS_ABI,
+    {
+        name: 'ownerOf',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'tokenId', type: 'uint256' }],
+        outputs: [{ name: '', type: 'address' }],
+    },
+] as const;
 
 export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
     const { address, isConnected } = useAccount();
-    const [nfts, setNfts] = useState<NFTData[]>([]);
-    const [loading, setLoading] = useState(true);
+
+    // Get total supply to know how many tokens exist
+    const { data: totalSupply } = useReadContract({
+        address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
+        abi: GLAZELETS_ABI,
+        functionName: 'totalSupply',
+    });
 
     // Get user's NFT balance
     const { data: balance } = useReadContract({
         address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
-        abi: GLAZELETS_ABI,
+        abi: EXTENDED_ABI,
         functionName: 'balanceOf',
         args: address ? [address] : undefined,
         query: { enabled: !!address },
     });
 
     const nftCount = balance ? Number(balance) : 0;
+    const supply = totalSupply ? Number(totalSupply) : 0;
 
-    // Build contract calls for tokenOfOwnerByIndex
-    const tokenIndexCalls = Array.from({ length: nftCount }, (_, i) => ({
+    // Build ownerOf calls for all existing tokens (1 to totalSupply)
+    const ownerOfCalls = Array.from({ length: supply }, (_, i) => ({
         address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
-        abi: GLAZELETS_ABI,
-        functionName: 'tokenOfOwnerByIndex' as const,
-        args: [address as `0x${string}`, BigInt(i)],
+        abi: EXTENDED_ABI,
+        functionName: 'ownerOf' as const,
+        args: [BigInt(i + 1)],
     }));
 
-    // Fetch all token IDs
-    const { data: tokenIdsData } = useReadContracts({
-        contracts: tokenIndexCalls,
-        query: { enabled: nftCount > 0 && !!address },
+    // Fetch all owners
+    const { data: ownersData, isLoading } = useReadContracts({
+        contracts: ownerOfCalls,
+        query: { enabled: supply > 0 },
     });
 
-    // Extract token IDs
-    const tokenIds = tokenIdsData
-        ?.map(result => result.status === 'success' ? Number(result.result) : null)
+    // Find token IDs owned by current user
+    const userTokenIds = ownersData
+        ?.map((result, index) => {
+            if (result.status === 'success' && 
+                (result.result as string).toLowerCase() === address?.toLowerCase()) {
+                return index + 1;
+            }
+            return null;
+        })
         .filter((id): id is number => id !== null) || [];
 
-    // Build contract calls for tokenURI
-    const tokenUriCalls = tokenIds.map(tokenId => ({
-        address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
-        abi: GLAZELETS_ABI,
-        functionName: 'tokenURI' as const,
-        args: [BigInt(tokenId)],
-    }));
+    // Simple function to get image URL from token ID
+    const getImageUrl = (tokenId: number) => `${IPFS_BASE}/${tokenId - 1}.png`;
 
-    // Fetch all token URIs
-    const { data: tokenUrisData } = useReadContracts({
-        contracts: tokenUriCalls,
-        query: { enabled: tokenIds.length > 0 },
-    });
-
-    // Fetch metadata from URIs
-    useEffect(() => {
-        const fetchMetadata = async () => {
-            if (!tokenUrisData || tokenIds.length === 0) {
-                setNfts([]);
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            const nftData: NFTData[] = [];
-
-            for (let i = 0; i < tokenIds.length; i++) {
-                const tokenId = tokenIds[i];
-                const uriResult = tokenUrisData[i];
-                
-                let image: string | null = null;
-                let origin = 'Unknown Region';
-
-                if (uriResult?.status === 'success' && uriResult.result) {
-                    try {
-                        const uri = uriResult.result as string;
-                        
-                        // Convert IPFS URI to gateway URL
-                        const metadataUrl = uri.startsWith('ipfs://')
-                            ? uri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
-                            : uri;
-
-                        console.log('Fetching metadata from:', metadataUrl);
-
-                        const response = await fetch(metadataUrl);
-                        if (response.ok) {
-                            const metadata = await response.json();
-                            console.log('Metadata:', metadata);
-                            
-                            // Get image URL
-                            if (metadata.image) {
-                                image = metadata.image.startsWith('ipfs://')
-                                    ? metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
-                                    : metadata.image;
-                            }
-                            
-                            // Get origin from metadata
-                            if (metadata.origin) {
-                                origin = metadata.origin;
-                            } else if (metadata.attributes) {
-                                const originAttr = metadata.attributes.find(
-                                    (a: { trait_type?: string; value?: string }) => 
-                                        a.trait_type?.toLowerCase() === 'origin'
-                                );
-                                if (originAttr) origin = originAttr.value || 'Unknown';
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Failed to fetch metadata for token', tokenId, e);
-                    }
-                }
-
-                nftData.push({
-                    tokenId,
-                    origin,
-                    image,
-                    name: `Glazelet #${tokenId}`,
-                });
-            }
-
-            setNfts(nftData);
-            setLoading(false);
-        };
-
-        fetchMetadata();
-    }, [tokenUrisData, tokenIds]);
-
-    // Update loading state based on balance query
-    useEffect(() => {
-        if (balance !== undefined && nftCount === 0) {
-            setLoading(false);
-        }
-    }, [balance, nftCount]);
+    const loading = isLoading || (supply > 0 && !ownersData);
 
     return (
         <div className="absolute inset-0 bg-[#0a0a0a] z-50 flex flex-col">
@@ -185,42 +115,31 @@ export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 gap-3">
-                        {nfts.map((nft) => (
+                        {userTokenIds.map((tokenId) => (
                             <div 
-                                key={nft.tokenId} 
+                                key={tokenId} 
                                 className="bg-[#111] border border-[#333] rounded-xl overflow-hidden hover:border-[#ec4899] transition-all"
                             >
                                 {/* Image */}
                                 <div className="aspect-square bg-black relative">
-                                    {nft.image ? (
-                                        <img 
-                                            src={nft.image} 
-                                            alt={nft.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                console.log('Image failed to load:', nft.image);
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <i className="fa-solid fa-image text-[#333] text-4xl"></i>
-                                        </div>
-                                    )}
+                                    <img 
+                                        src={getImageUrl(tokenId)} 
+                                        alt={`Glazelet #${tokenId}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                        }}
+                                    />
                                     {/* Token ID badge */}
                                     <div className="absolute top-2 right-2 bg-black/80 text-white text-[10px] px-2 py-1 rounded font-mono">
-                                        #{nft.tokenId}
+                                        #{tokenId}
                                     </div>
                                 </div>
                                 
                                 {/* Info */}
                                 <div className="p-3 border-t border-[#333]">
-                                    <div className="font-brand text-xs text-white truncate mb-1">
-                                        {nft.name}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[10px] text-gray-500">
-                                        <i className="fa-solid fa-location-dot text-[#ec4899]"></i>
-                                        <span className="truncate">{nft.origin}</span>
+                                    <div className="font-brand text-xs text-white truncate">
+                                        Glazelet #{tokenId}
                                     </div>
                                 </div>
                             </div>
