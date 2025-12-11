@@ -10,6 +10,9 @@ import { useFarcaster } from './hooks/useFarcaster';
 import { useGlazelets } from './hooks/useGlazelets';
 
 const App = () => {
+  // --- Welcome Screen State ---
+  const [showWelcome, setShowWelcome] = useState(true);
+
   // --- Farcaster SDK ---
   const { 
     isSDKLoaded, 
@@ -102,6 +105,18 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // --- Enter app and start music ---
+  const handleEnter = async () => {
+    const audio = AudioService.getInstance();
+    if (!audio.isInitialized) {
+      await audio.init();
+    }
+    if (audio.isMusicMuted) audio.toggleMusicMute();
+    if (audio.isSfxMuted) audio.toggleSfxMute();
+    setIsSoundEnabled(true);
+    setShowWelcome(false);
+  };
+
   // --- Audio Handler - toggles both music and SFX ---
   const toggleSound = async () => {
     const audio = AudioService.getInstance();
@@ -112,7 +127,6 @@ const App = () => {
       if (audio.isSfxMuted) audio.toggleSfxMute();
     } else {
       const musicMuted = audio.toggleMusicMute();
-      // Keep SFX in sync with music
       if (audio.isSfxMuted !== musicMuted) {
         audio.toggleSfxMute();
       }
@@ -135,10 +149,8 @@ const App = () => {
     const region = territories[selectedRegionId];
     if (!region) return;
 
-    // Store the region being minted (for success modal)
     setMintedRegion(region);
 
-    // Trigger Laser Effect immediately for visual feedback
     const newEffect: GameEffect = {
       targetId: selectedRegionId,
       startTime: Date.now(),
@@ -148,17 +160,13 @@ const App = () => {
     };
     setEffects(prev => [...prev, newEffect]);
 
-    // Play Sound
     try {
       AudioService.getInstance().playLaserSound();
     } catch (e) {
       console.warn("Audio playback failed:", e);
     }
 
-    // Wait for laser animation to complete before triggering wallet popup
     await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Execute the actual mint - wallet popup appears after animation
     await mint(region.name);
   };
 
@@ -207,6 +215,55 @@ const App = () => {
     if (!hasEnoughDonut) return 'NEED DONUT';
     return 'EXTRACT';
   };
+
+  // --- Welcome Screen ---
+  if (showWelcome) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-black text-gray-200 font-tech overflow-hidden select-none">
+        <div className="w-full max-w-[420px] h-full max-h-[900px] bg-[#0a0a0a] flex flex-col items-center justify-center relative shadow-[0_0_50px_rgba(255,255,255,0.1)] overflow-hidden border border-[#333]">
+          
+          {/* Animated background glow */}
+          <div className="absolute inset-0 bg-gradient-radial from-[#ec4899]/10 via-transparent to-transparent animate-pulse"></div>
+          
+          {/* Logo */}
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="text-5xl font-brand tracking-widest text-white text-shadow-white mb-2">
+              GLAZELETS
+            </div>
+            <div className="text-sm font-tech text-[#ec4899] tracking-[0.3em] uppercase mb-12">
+              by Glaze Corp.
+            </div>
+            
+            {/* Donut icon */}
+            <div className="w-32 h-32 mb-12 relative">
+              <div className="absolute inset-0 bg-[#ec4899]/20 rounded-full animate-ping"></div>
+              <div className="relative w-full h-full rounded-full border-4 border-[#ec4899] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <span className="text-6xl">🍩</span>
+              </div>
+            </div>
+
+            {/* Tagline */}
+            <p className="text-gray-400 text-center text-sm mb-8 px-8 leading-relaxed">
+              Extract unique Glazelets from regions around the world. Burn DONUT to mint your NFT.
+            </p>
+            
+            {/* Enter Button */}
+            <button 
+              onClick={handleEnter}
+              className="px-12 py-4 bg-[#ec4899] text-white font-brand text-xl uppercase tracking-widest rounded hover:brightness-110 transition-all active:translate-y-px shadow-[0_0_30px_rgba(236,72,153,0.5)] hover:shadow-[0_0_50px_rgba(236,72,153,0.7)]"
+            >
+              Enter
+            </button>
+            
+            <p className="text-gray-600 text-xs mt-4">
+              <i className="fa-solid fa-volume-high mr-2"></i>
+              Sound will be enabled
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center h-screen bg-black text-gray-200 font-tech overflow-hidden select-none">
