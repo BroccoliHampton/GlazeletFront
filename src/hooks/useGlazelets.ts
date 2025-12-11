@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
-import { parseUnits, formatUnits, maxUint256, encodeFunctionData } from 'viem'
+import { formatUnits, encodeFunctionData } from 'viem'
 import { sdk } from '@farcaster/miniapp-sdk'
 import { CONTRACTS, MINT_CONFIG, ERC20_ABI, GLAZELETS_ABI } from '../config/wagmi'
 
@@ -11,6 +11,13 @@ export function useGlazelets() {
   const [mintStatus, setMintStatus] = useState<MintStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lastTxHash, setLastTxHash] = useState<`0x${string}` | null>(null)
+
+  // Read mint price from contract
+  const { data: mintPriceRaw } = useReadContract({
+    address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
+    abi: GLAZELETS_ABI,
+    functionName: 'mintPrice',
+  })
 
   // Read DONUT balance
   const { data: donutBalance, refetch: refetchBalance } = useReadContract({
@@ -46,20 +53,22 @@ export function useGlazelets() {
     query: { enabled: !!address },
   })
 
+  // Use contract mint price, fallback to config if not loaded yet
+  const mintPriceWei = mintPriceRaw ?? BigInt(0)
+  
+  // Format mint price for display (assumes 18 decimals like DONUT)
+  const mintPriceFormatted = mintPriceWei > 0 
+    ? parseFloat(formatUnits(mintPriceWei, MINT_CONFIG.PRICE_DONUT_DECIMALS))
+    : 0
+
   // Format balance for display
   const formattedBalance = donutBalance 
     ? parseFloat(formatUnits(donutBalance, MINT_CONFIG.PRICE_DONUT_DECIMALS))
     : 0
-
-  // Mint price in wei
-  const mintPriceWei = parseUnits(
-    MINT_CONFIG.PRICE_DONUT.toString(), 
-    MINT_CONFIG.PRICE_DONUT_DECIMALS
-  )
   
-  // Checks
-  const hasEnoughDonut = donutBalance ? donutBalance >= mintPriceWei : false
-  const needsApproval = donutAllowance ? donutAllowance < mintPriceWei : true
+  // Checks - only valid if we have the mint price
+  const hasEnoughDonut = (donutBalance && mintPriceWei > 0) ? donutBalance >= mintPriceWei : false
+  const needsApproval = (donutAllowance && mintPriceWei > 0) ? donutAllowance < mintPriceWei : true
   const canMint = userMintCount !== undefined ? Number(userMintCount) < MINT_CONFIG.MAX_PER_WALLET : true
   const isSoldOut = totalSupply !== undefined ? Number(totalSupply) >= MINT_CONFIG.MAX_SUPPLY : false
 
@@ -93,10 +102,17 @@ export function useGlazelets() {
     console.log('=== MINT STARTED ===')
     console.log('Region:', regionName)
     console.log('Address:', address)
+    console.log('Mint price (wei):', mintPriceWei.toString())
     
     if (!address || !isConnected) {
       console.error('Not connected')
       setError('Wallet not connected')
+      return null
+    }
+
+    if (mintPriceWei === BigInt(0)) {
+      console.error('Mint price not loaded')
+      setError('Loading mint price...')
       return null
     }
 
@@ -111,17 +127,17 @@ export function useGlazelets() {
       
       const needsApprovalNow = !currentAllowance || currentAllowance < mintPriceWei
 
-      // Step 1: Approve if needed
+      // Step 1: Approve if needed (only approve exact mint amount from contract)
       if (needsApprovalNow) {
         console.log('Approval needed, sending approve tx...')
         setMintStatus('approving')
         
         try {
-          // Encode approve function call
+          // Encode approve function call - approve exact amount from contract
           const approveData = encodeFunctionData({
             abi: ERC20_ABI,
             functionName: 'approve',
-            args: [CONTRACTS.GLAZELETS_NFT as `0x${string}`, maxUint256],
+            args: [CONTRACTS.GLAZELETS_NFT as `0x${string}`, mintPriceWei],
           })
           
           const approveTx = await sendTransaction(
@@ -234,7 +250,7 @@ export function useGlazelets() {
     error,
     lastTxHash,
     reset,
-    mintPrice: Number(MINT_CONFIG.PRICE_DONUT),
+    mintPrice: mintPriceFormatted, // Now from contract!
     maxSupply: MINT_CONFIG.MAX_SUPPLY,
     maxPerWallet: MINT_CONFIG.MAX_PER_WALLET,
   }
