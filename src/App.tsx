@@ -68,9 +68,8 @@ const App = () => {
   const [zoom, setZoom] = useState(1);
   const [effects, setEffects] = useState<GameEffect[]>([]);
   
-  // Audio State
-  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
-  const [isSfxEnabled, setIsSfxEnabled] = useState(true);
+  // Audio State - single toggle for both music and SFX
+  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
 
   // --- Initialize Farcaster SDK ---
   useEffect(() => {
@@ -103,23 +102,22 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // --- Audio Handlers ---
-  const toggleMusic = async () => {
+  // --- Audio Handler - toggles both music and SFX ---
+  const toggleSound = async () => {
     const audio = AudioService.getInstance();
     if (!audio.isInitialized) {
       await audio.init();
-      setIsPlayingMusic(true);
+      setIsSoundEnabled(true);
       if (audio.isMusicMuted) audio.toggleMusicMute();
+      if (audio.isSfxMuted) audio.toggleSfxMute();
     } else {
-      const muted = audio.toggleMusicMute();
-      setIsPlayingMusic(!muted);
+      const musicMuted = audio.toggleMusicMute();
+      // Keep SFX in sync with music
+      if (audio.isSfxMuted !== musicMuted) {
+        audio.toggleSfxMute();
+      }
+      setIsSoundEnabled(!musicMuted);
     }
-  };
-
-  const toggleSfx = () => {
-    const audio = AudioService.getInstance();
-    const muted = audio.toggleSfxMute();
-    setIsSfxEnabled(!muted);
   };
 
   // --- Gameplay Actions ---
@@ -235,19 +233,11 @@ const App = () => {
             </button>
 
             <button 
-              onClick={toggleMusic}
-              className={`transition-colors text-xl ${isPlayingMusic ? 'text-[#ec4899]' : 'text-gray-600 hover:text-[#ec4899]'}`}
-              title="Toggle Music"
+              onClick={toggleSound}
+              className={`transition-colors text-xl ${isSoundEnabled ? 'text-[#ec4899]' : 'text-gray-600 hover:text-[#ec4899]'}`}
+              title="Toggle Sound"
             >
-              <i className="fa-solid fa-music"></i>
-            </button>
-            
-            <button 
-              onClick={toggleSfx}
-              className={`transition-colors text-xl ${isSfxEnabled ? 'text-[#ec4899]' : 'text-gray-600 hover:text-[#ec4899]'}`}
-              title="Toggle SFX"
-            >
-              <i className="fa-solid fa-volume-high"></i>
+              <i className={`fa-solid ${isSoundEnabled ? 'fa-volume-high' : 'fa-volume-xmark'}`}></i>
             </button>
 
             <div className="flex items-center gap-2 pl-3 border-l border-[#333]">
@@ -322,7 +312,7 @@ const App = () => {
           )}
 
           {/* Zoom Slider */}
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/80 border border-[#333] rounded p-3 pt-4 pb-8 flex flex-col items-center gap-3 z-20 h-44 backdrop-blur-sm">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/80 border border-[#333] rounded p-3 flex flex-col items-center justify-between z-20 h-40 backdrop-blur-sm">
             <div className="text-[10px] text-white"><i className="fa-solid fa-plus"></i></div>
             <input 
               type="range" 
@@ -330,7 +320,7 @@ const App = () => {
               min="1" max="3.5" step="0.1" 
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
-              className="h-24 w-2 accent-[#ec4899]"
+              className="h-20 w-2 accent-[#ec4899]"
               style={{ WebkitAppearance: 'slider-vertical' } as any}
             />
             <div className="text-[10px] text-white"><i className="fa-solid fa-minus"></i></div>
