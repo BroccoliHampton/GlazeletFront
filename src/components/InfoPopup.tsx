@@ -42,12 +42,12 @@ export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
     const nftCount = balance ? Number(balance) : 0;
     const supply = totalSupply ? Number(totalSupply) : 0;
 
-    // Build ownerOf calls for all existing tokens (1 to totalSupply)
+    // Build ownerOf calls for all existing tokens (0 to totalSupply-1)
     const ownerOfCalls = Array.from({ length: supply }, (_, i) => ({
         address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
         abi: EXTENDED_ABI,
         functionName: 'ownerOf' as const,
-        args: [BigInt(i + 1)],
+        args: [BigInt(i)], // Token IDs start at 0
     }));
 
     // Fetch all owners
@@ -61,7 +61,7 @@ export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
         ?.map((result, index) => {
             if (result.status === 'success' && 
                 (result.result as string).toLowerCase() === address?.toLowerCase()) {
-                return index + 1;
+                return index; // Token IDs start at 0
             }
             return null;
         })
