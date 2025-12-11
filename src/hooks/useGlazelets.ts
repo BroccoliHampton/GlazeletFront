@@ -63,28 +63,25 @@ export function useGlazelets() {
   const canMint = userMintCount !== undefined ? Number(userMintCount) < MINT_CONFIG.MAX_PER_WALLET : true
   const isSoldOut = totalSupply !== undefined ? Number(totalSupply) >= MINT_CONFIG.MAX_SUPPLY : false
 
-  // Send transaction using Farcaster SDK
-  const sendTransaction = useCallback(async (to: string, data: `0x${string}`) => {
-    console.log('Sending transaction via Farcaster SDK...')
+  // Send transaction using Farcaster SDK ethProvider
+  const sendTransaction = useCallback(async (to: string, data: `0x${string}`, from: string) => {
+    console.log('Sending transaction via Farcaster ethProvider...')
+    console.log('From:', from)
     console.log('To:', to)
     console.log('Data:', data)
     
     try {
-      const result = await sdk.wallet.sendTransaction({
-        chainId: `eip155:8453`, // Base mainnet
-        transaction: {
+      const txHash = await sdk.wallet.ethProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from,
           to,
           data,
-        },
+        }],
       })
       
-      console.log('Transaction result:', result)
-      
-      if (result && 'transactionHash' in result) {
-        return result.transactionHash as `0x${string}`
-      }
-      
-      throw new Error('No transaction hash returned')
+      console.log('Transaction hash:', txHash)
+      return txHash as `0x${string}`
     } catch (err: any) {
       console.error('Transaction failed:', err)
       throw err
@@ -127,7 +124,7 @@ export function useGlazelets() {
             args: [CONTRACTS.GLAZELETS_NFT as `0x${string}`, maxUint256],
           })
           
-          const approveTx = await sendTransaction(CONTRACTS.DONUT_TOKEN, approveData)
+          const approveTx = await sendTransaction(CONTRACTS.DONUT_TOKEN, approveData, address)
           
           console.log('Approve tx sent:', approveTx)
           setLastTxHash(approveTx)
@@ -160,7 +157,7 @@ export function useGlazelets() {
         args: [regionName],
       })
       
-      const mintTx = await sendTransaction(CONTRACTS.GLAZELETS_NFT, mintData)
+      const mintTx = await sendTransaction(CONTRACTS.GLAZELETS_NFT, mintData, address)
       
       console.log('Mint tx sent:', mintTx)
       setLastTxHash(mintTx)
