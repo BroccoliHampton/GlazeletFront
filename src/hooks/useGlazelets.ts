@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react'
-import { useAccount, useReadContract, useWalletClient } from 'wagmi'
-import { parseUnits, formatUnits, maxUint256 } from 'viem'
+import { useAccount, useReadContract } from 'wagmi'
+import { parseUnits, formatUnits, maxUint256, encodeFunctionData } from 'viem'
+import { sdk } from '@farcaster/miniapp-sdk'
 import { CONTRACTS, MINT_CONFIG, ERC20_ABI, GLAZELETS_ABI } from '../config/wagmi'
 
 export type MintStatus = 'idle' | 'approving' | 'minting' | 'success' | 'error'
 
 export function useGlazelets() {
   const { address, isConnected } = useAccount()
-  const { data: walletClient } = useWalletClient()
   const [mintStatus, setMintStatus] = useState<MintStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lastTxHash, setLastTxHash] = useState<`0x${string}` | null>(null)
@@ -63,22 +63,43 @@ export function useGlazelets() {
   const canMint = userMintCount !== undefined ? Number(userMintCount) < MINT_CONFIG.MAX_PER_WALLET : true
   const isSoldOut = totalSupply !== undefined ? Number(totalSupply) >= MINT_CONFIG.MAX_SUPPLY : false
 
-  // Main mint function - using walletClient directly
+  // Send transaction using Farcaster SDK
+  const sendTransaction = useCallback(async (to: string, data: `0x${string}`) => {
+    console.log('Sending transaction via Farcaster SDK...')
+    console.log('To:', to)
+    console.log('Data:', data)
+    
+    try {
+      const result = await sdk.wallet.sendTransaction({
+        chainId: `eip155:8453`, // Base mainnet
+        transaction: {
+          to,
+          data,
+        },
+      })
+      
+      console.log('Transaction result:', result)
+      
+      if (result && 'transactionHash' in result) {
+        return result.transactionHash as `0x${string}`
+      }
+      
+      throw new Error('No transaction hash returned')
+    } catch (err: any) {
+      console.error('Transaction failed:', err)
+      throw err
+    }
+  }, [])
+
+  // Main mint function
   const mint = useCallback(async (regionName: string) => {
     console.log('=== MINT STARTED ===')
     console.log('Region:', regionName)
     console.log('Address:', address)
-    console.log('WalletClient:', !!walletClient)
     
     if (!address || !isConnected) {
       console.error('Not connected')
       setError('Wallet not connected')
-      return null
-    }
-
-    if (!walletClient) {
-      console.error('No wallet client')
-      setError('Wallet not ready')
       return null
     }
 
@@ -99,12 +120,14 @@ export function useGlazelets() {
         setMintStatus('approving')
         
         try {
-          const approveTx = await walletClient.writeContract({
-            address: CONTRACTS.DONUT_TOKEN as `0x${string}`,
+          // Encode approve function call
+          const approveData = encodeFunctionData({
             abi: ERC20_ABI,
             functionName: 'approve',
             args: [CONTRACTS.GLAZELETS_NFT as `0x${string}`, maxUint256],
           })
+          
+          const approveTx = await sendTransaction(CONTRACTS.DONUT_TOKEN, approveData)
           
           console.log('Approve tx sent:', approveTx)
           setLastTxHash(approveTx)
@@ -116,10 +139,10 @@ export function useGlazelets() {
           console.log('Approval confirmed')
         } catch (approveErr: any) {
           console.error('Approve failed:', approveErr)
-          if (approveErr?.message?.includes('User rejected') || approveErr?.message?.includes('rejected')) {
+          if (approveErr?.message?.includes('rejected') || approveErr?.message?.includes('cancelled')) {
             setError('Transaction rejected')
           } else {
-            setError('Approval failed: ' + (approveErr?.shortMessage || approveErr?.message || 'Unknown error'))
+            setError('Approval failed: ' + (approveErr?.message || 'Unknown error'))
           }
           setMintStatus('error')
           return null
@@ -130,12 +153,14 @@ export function useGlazelets() {
       console.log('Sending mint tx...')
       setMintStatus('minting')
       
-      const mintTx = await walletClient.writeContract({
-        address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
+      // Encode mint function call
+      const mintData = encodeFunctionData({
         abi: GLAZELETS_ABI,
         functionName: 'mint',
         args: [regionName],
       })
+      
+      const mintTx = await sendTransaction(CONTRACTS.GLAZELETS_NFT, mintData)
       
       console.log('Mint tx sent:', mintTx)
       setLastTxHash(mintTx)
@@ -160,20 +185,20 @@ export function useGlazelets() {
       console.error('=== MINT ERROR ===', err)
       setMintStatus('error')
       
-      if (err?.message?.includes('User rejected') || err?.message?.includes('rejected')) {
+      if (err?.message?.includes('rejected') || err?.message?.includes('cancelled')) {
         setError('Transaction rejected')
       } else if (err?.message?.includes('insufficient')) {
         setError('Insufficient funds for gas')
       } else {
-        setError(err?.shortMessage || err?.message || 'Mint failed')
+        setError(err?.message || 'Mint failed')
       }
       return null
     }
   }, [
     address,
     isConnected,
-    walletClient,
     mintPriceWei,
+    sendTransaction,
     refetchAllowance,
     refetchBalance,
     refetchSupply,
