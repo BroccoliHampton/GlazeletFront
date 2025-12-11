@@ -64,7 +64,7 @@ export function useGlazelets() {
   const isSoldOut = totalSupply !== undefined ? Number(totalSupply) >= MINT_CONFIG.MAX_SUPPLY : false
 
   // Send transaction using Farcaster SDK ethProvider
-  const sendTransaction = useCallback(async (to: string, data: `0x${string}`, from: string) => {
+  const sendTransaction = useCallback(async (to: `0x${string}`, data: `0x${string}`, from: `0x${string}`) => {
     console.log('Sending transaction via Farcaster ethProvider...')
     console.log('From:', from)
     console.log('To:', to)
@@ -82,7 +82,7 @@ export function useGlazelets() {
       
       console.log('Transaction hash:', txHash)
       return txHash as `0x${string}`
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Transaction failed:', err)
       throw err
     }
@@ -124,7 +124,11 @@ export function useGlazelets() {
             args: [CONTRACTS.GLAZELETS_NFT as `0x${string}`, maxUint256],
           })
           
-          const approveTx = await sendTransaction(CONTRACTS.DONUT_TOKEN, approveData, address)
+          const approveTx = await sendTransaction(
+            CONTRACTS.DONUT_TOKEN as `0x${string}`, 
+            approveData, 
+            address
+          )
           
           console.log('Approve tx sent:', approveTx)
           setLastTxHash(approveTx)
@@ -134,12 +138,13 @@ export function useGlazelets() {
           await new Promise(resolve => setTimeout(resolve, 5000))
           await refetchAllowance()
           console.log('Approval confirmed')
-        } catch (approveErr: any) {
+        } catch (approveErr: unknown) {
           console.error('Approve failed:', approveErr)
-          if (approveErr?.message?.includes('rejected') || approveErr?.message?.includes('cancelled')) {
+          const errMsg = approveErr instanceof Error ? approveErr.message : 'Unknown error'
+          if (errMsg.includes('rejected') || errMsg.includes('cancelled')) {
             setError('Transaction rejected')
           } else {
-            setError('Approval failed: ' + (approveErr?.message || 'Unknown error'))
+            setError('Approval failed: ' + errMsg)
           }
           setMintStatus('error')
           return null
@@ -157,7 +162,11 @@ export function useGlazelets() {
         args: [regionName],
       })
       
-      const mintTx = await sendTransaction(CONTRACTS.GLAZELETS_NFT, mintData, address)
+      const mintTx = await sendTransaction(
+        CONTRACTS.GLAZELETS_NFT as `0x${string}`, 
+        mintData, 
+        address
+      )
       
       console.log('Mint tx sent:', mintTx)
       setLastTxHash(mintTx)
@@ -178,16 +187,17 @@ export function useGlazelets() {
       ])
       
       return mintTx
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('=== MINT ERROR ===', err)
       setMintStatus('error')
       
-      if (err?.message?.includes('rejected') || err?.message?.includes('cancelled')) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error'
+      if (errMsg.includes('rejected') || errMsg.includes('cancelled')) {
         setError('Transaction rejected')
-      } else if (err?.message?.includes('insufficient')) {
+      } else if (errMsg.includes('insufficient')) {
         setError('Insufficient funds for gas')
       } else {
-        setError(err?.message || 'Mint failed')
+        setError(errMsg || 'Mint failed')
       }
       return null
     }
