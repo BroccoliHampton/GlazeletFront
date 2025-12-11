@@ -65,7 +65,7 @@ const App = () => {
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const viewMode: ViewMode = 'territories';
-  const [zoom, setZoom] = useState(1.8);
+  const [zoom, setZoom] = useState(1);
   const [effects, setEffects] = useState<GameEffect[]>([]);
   
   // Audio State
@@ -283,16 +283,18 @@ const App = () => {
           </div>
         </div>
         
-        {/* Instruction Banner */}
-        <div className="px-4 relative z-40 shrink-0">
-          <div className="bg-[#111] border border-[#333] rounded p-3 mt-3 shadow-inner shadow-black flex items-center justify-center h-20 text-center relative overflow-hidden group">
-            <div className="absolute inset-0 bg-[#ec4899]/5 opacity-0 group-hover:opacity-10 transition-opacity"></div>
-            <i className="fa-solid fa-circle-info text-[#ec4899] text-lg mr-3 animate-pulse"></i>
-            <div className="font-brand text-white text-xs sm:text-sm tracking-widest uppercase leading-relaxed">
-              Choose a region to extract <br/> your <span className="text-[#ec4899] text-shadow-neon font-bold">Glazelet</span> from below...
+        {/* Instruction Banner - hide when info popup is open */}
+        {!showInfoPopup && (
+          <div className="px-4 relative z-40 shrink-0">
+            <div className="bg-[#111] border border-[#333] rounded p-3 mt-3 shadow-inner shadow-black flex items-center justify-center h-20 text-center relative overflow-hidden group">
+              <div className="absolute inset-0 bg-[#ec4899]/5 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+              <i className="fa-solid fa-circle-info text-[#ec4899] text-lg mr-3 animate-pulse"></i>
+              <div className="font-brand text-white text-xs sm:text-sm tracking-widest uppercase leading-relaxed">
+                Choose a region to extract <br/> your <span className="text-[#ec4899] text-shadow-neon font-bold">Glazelet</span> from below...
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* 3D Map View */}
         <div className="relative flex-1 flex flex-col overflow-hidden w-full">
