@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useReadContract, useWalletClient } from 'wagmi'
 import { parseUnits, formatUnits, maxUint256 } from 'viem'
 import { CONTRACTS, MINT_CONFIG, ERC20_ABI, GLAZELETS_ABI } from '../config/wagmi'
 
@@ -7,6 +7,7 @@ export type MintStatus = 'idle' | 'approving' | 'minting' | 'success' | 'error'
 
 export function useGlazelets() {
   const { address, isConnected } = useAccount()
+  const { data: walletClient } = useWalletClient()
   const [mintStatus, setMintStatus] = useState<MintStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lastTxHash, setLastTxHash] = useState<`0x${string}` | null>(null)
@@ -45,9 +46,6 @@ export function useGlazelets() {
     query: { enabled: !!address },
   })
 
-  // Write contract hook
-  const { writeContractAsync } = useWriteContract()
-
   // Format balance for display
   const formattedBalance = donutBalance 
     ? parseFloat(formatUnits(donutBalance, MINT_CONFIG.PRICE_DONUT_DECIMALS))
@@ -65,15 +63,22 @@ export function useGlazelets() {
   const canMint = userMintCount !== undefined ? Number(userMintCount) < MINT_CONFIG.MAX_PER_WALLET : true
   const isSoldOut = totalSupply !== undefined ? Number(totalSupply) >= MINT_CONFIG.MAX_SUPPLY : false
 
-  // Main mint function
+  // Main mint function - using walletClient directly
   const mint = useCallback(async (regionName: string) => {
     console.log('=== MINT STARTED ===')
     console.log('Region:', regionName)
     console.log('Address:', address)
+    console.log('WalletClient:', !!walletClient)
     
     if (!address || !isConnected) {
       console.error('Not connected')
       setError('Wallet not connected')
+      return null
+    }
+
+    if (!walletClient) {
+      console.error('No wallet client')
+      setError('Wallet not ready')
       return null
     }
 
@@ -94,7 +99,7 @@ export function useGlazelets() {
         setMintStatus('approving')
         
         try {
-          const approveTx = await writeContractAsync({
+          const approveTx = await walletClient.writeContract({
             address: CONTRACTS.DONUT_TOKEN as `0x${string}`,
             abi: ERC20_ABI,
             functionName: 'approve',
@@ -104,7 +109,7 @@ export function useGlazelets() {
           console.log('Approve tx sent:', approveTx)
           setLastTxHash(approveTx)
           
-          // Wait for approval to be mined (simple delay approach)
+          // Wait for approval to be mined
           console.log('Waiting for approval to confirm...')
           await new Promise(resolve => setTimeout(resolve, 5000))
           await refetchAllowance()
@@ -114,7 +119,7 @@ export function useGlazelets() {
           if (approveErr?.message?.includes('User rejected') || approveErr?.message?.includes('rejected')) {
             setError('Transaction rejected')
           } else {
-            setError('Approval failed')
+            setError('Approval failed: ' + (approveErr?.shortMessage || approveErr?.message || 'Unknown error'))
           }
           setMintStatus('error')
           return null
@@ -125,7 +130,7 @@ export function useGlazelets() {
       console.log('Sending mint tx...')
       setMintStatus('minting')
       
-      const mintTx = await writeContractAsync({
+      const mintTx = await walletClient.writeContract({
         address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
         abi: GLAZELETS_ABI,
         functionName: 'mint',
@@ -167,8 +172,8 @@ export function useGlazelets() {
   }, [
     address,
     isConnected,
+    walletClient,
     mintPriceWei,
-    writeContractAsync,
     refetchAllowance,
     refetchBalance,
     refetchSupply,
