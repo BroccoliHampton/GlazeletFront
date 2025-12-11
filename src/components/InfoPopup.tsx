@@ -29,10 +29,43 @@ export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
 
     const nftCount = balance ? Number(balance) : 0;
 
-    // Fetch token IDs and metadata
+    // Build contract calls for tokenOfOwnerByIndex
+    const tokenIndexCalls = Array.from({ length: nftCount }, (_, i) => ({
+        address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
+        abi: GLAZELETS_ABI,
+        functionName: 'tokenOfOwnerByIndex' as const,
+        args: [address as `0x${string}`, BigInt(i)],
+    }));
+
+    // Fetch all token IDs
+    const { data: tokenIdsData } = useReadContracts({
+        contracts: tokenIndexCalls,
+        query: { enabled: nftCount > 0 && !!address },
+    });
+
+    // Extract token IDs
+    const tokenIds = tokenIdsData
+        ?.map(result => result.status === 'success' ? Number(result.result) : null)
+        .filter((id): id is number => id !== null) || [];
+
+    // Build contract calls for tokenURI
+    const tokenUriCalls = tokenIds.map(tokenId => ({
+        address: CONTRACTS.GLAZELETS_NFT as `0x${string}`,
+        abi: GLAZELETS_ABI,
+        functionName: 'tokenURI' as const,
+        args: [BigInt(tokenId)],
+    }));
+
+    // Fetch all token URIs
+    const { data: tokenUrisData } = useReadContracts({
+        contracts: tokenUriCalls,
+        query: { enabled: tokenIds.length > 0 },
+    });
+
+    // Fetch metadata from URIs
     useEffect(() => {
-        const fetchNFTs = async () => {
-            if (!address || nftCount === 0) {
+        const fetchMetadata = async () => {
+            if (!tokenUrisData || tokenIds.length === 0) {
                 setNfts([]);
                 setLoading(false);
                 return;
@@ -41,103 +74,73 @@ export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
             setLoading(true);
             const nftData: NFTData[] = [];
 
-            try {
-                for (let i = 0; i < nftCount; i++) {
-                    // Get token ID at index
-                    const tokenIdResponse = await fetch(
-                        `https://base.blockscout.com/api/v2/smart-contracts/${CONTRACTS.GLAZELETS_NFT}/query-read-method`,
-                        {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                args: [address, i.toString()],
-                                method_id: 'tokenOfOwnerByIndex',
-                            }),
-                        }
-                    ).catch(() => null);
+            for (let i = 0; i < tokenIds.length; i++) {
+                const tokenId = tokenIds[i];
+                const uriResult = tokenUrisData[i];
+                
+                let image: string | null = null;
+                let origin = 'Unknown Region';
 
-                    // Fallback: just use index as tokenId estimate (not ideal but works for display)
-                    let tokenId = i + 1;
-                    
-                    if (tokenIdResponse?.ok) {
-                        const data = await tokenIdResponse.json();
-                        if (data.result?.output?.[0]?.value) {
-                            tokenId = parseInt(data.result.output[0].value);
-                        }
-                    }
-
-                    // Try to get tokenURI
-                    let image: string | null = null;
-                    let origin = 'Unknown Region';
-
+                if (uriResult?.status === 'success' && uriResult.result) {
                     try {
-                        const uriResponse = await fetch(
-                            `https://base.blockscout.com/api/v2/smart-contracts/${CONTRACTS.GLAZELETS_NFT}/query-read-method`,
-                            {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    args: [tokenId.toString()],
-                                    method_id: 'tokenURI',
-                                }),
-                            }
-                        );
+                        const uri = uriResult.result as string;
+                        
+                        // Convert IPFS URI to gateway URL
+                        const metadataUrl = uri.startsWith('ipfs://')
+                            ? uri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+                            : uri;
 
-                        if (uriResponse.ok) {
-                            const uriData = await uriResponse.json();
-                            const uri = uriData.result?.output?.[0]?.value;
+                        console.log('Fetching metadata from:', metadataUrl);
+
+                        const response = await fetch(metadataUrl);
+                        if (response.ok) {
+                            const metadata = await response.json();
+                            console.log('Metadata:', metadata);
                             
-                            if (uri) {
-                                // Convert IPFS URI to gateway URL
-                                const metadataUrl = uri.startsWith('ipfs://')
-                                    ? uri.replace('ipfs://', 'https://ipfs.io/ipfs/')
-                                    : uri;
-
-                                // Fetch metadata
-                                const metaResponse = await fetch(metadataUrl);
-                                if (metaResponse.ok) {
-                                    const metadata = await metaResponse.json();
-                                    
-                                    // Convert image IPFS to gateway
-                                    if (metadata.image) {
-                                        image = metadata.image.startsWith('ipfs://')
-                                            ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/')
-                                            : metadata.image;
-                                    }
-                                    
-                                    // Try to get origin from metadata or attributes
-                                    if (metadata.origin) {
-                                        origin = metadata.origin;
-                                    } else if (metadata.attributes) {
-                                        const originAttr = metadata.attributes.find(
-                                            (a: any) => a.trait_type?.toLowerCase() === 'origin'
-                                        );
-                                        if (originAttr) origin = originAttr.value;
-                                    }
-                                }
+                            // Get image URL
+                            if (metadata.image) {
+                                image = metadata.image.startsWith('ipfs://')
+                                    ? metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+                                    : metadata.image;
+                            }
+                            
+                            // Get origin from metadata
+                            if (metadata.origin) {
+                                origin = metadata.origin;
+                            } else if (metadata.attributes) {
+                                const originAttr = metadata.attributes.find(
+                                    (a: { trait_type?: string; value?: string }) => 
+                                        a.trait_type?.toLowerCase() === 'origin'
+                                );
+                                if (originAttr) origin = originAttr.value || 'Unknown';
                             }
                         }
                     } catch (e) {
                         console.warn('Failed to fetch metadata for token', tokenId, e);
                     }
-
-                    nftData.push({
-                        tokenId,
-                        origin,
-                        image,
-                        name: `Glazelet #${tokenId}`,
-                    });
                 }
-            } catch (e) {
-                console.error('Error fetching NFTs:', e);
+
+                nftData.push({
+                    tokenId,
+                    origin,
+                    image,
+                    name: `Glazelet #${tokenId}`,
+                });
             }
 
             setNfts(nftData);
             setLoading(false);
         };
 
-        fetchNFTs();
-    }, [address, nftCount]);
+        fetchMetadata();
+    }, [tokenUrisData, tokenIds]);
+
+    // Update loading state based on balance query
+    useEffect(() => {
+        if (balance !== undefined && nftCount === 0) {
+            setLoading(false);
+        }
+    }, [balance, nftCount]);
 
     return (
         <div className="absolute inset-0 bg-[#0a0a0a] z-50 flex flex-col">
@@ -195,7 +198,7 @@ export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
                                             alt={nft.name}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
-                                                (e.target as HTMLImageElement).src = '';
+                                                console.log('Image failed to load:', nft.image);
                                                 (e.target as HTMLImageElement).style.display = 'none';
                                             }}
                                         />
