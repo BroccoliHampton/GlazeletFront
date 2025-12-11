@@ -64,7 +64,7 @@ const App = () => {
 
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const viewMode: ViewMode = 'territories'; // Will add toggle back when hooked to real data
+  const viewMode: ViewMode = 'territories';
   const [zoom, setZoom] = useState(1.8);
   const [effects, setEffects] = useState<GameEffect[]>([]);
   
@@ -75,10 +75,8 @@ const App = () => {
   // --- Initialize Farcaster SDK ---
   useEffect(() => {
     if (isSDKLoaded) {
-      // Call ready to hide splash screen
       farcasterReady();
       
-      // Auto-connect if in Mini App
       if (isInMiniApp && !isConnected && connectors.length > 0) {
         connect({ connector: connectors[0] });
       }
@@ -97,7 +95,6 @@ const App = () => {
     const interval = setInterval(() => {
       const currentTime = Date.now();
       
-      // Cleanup old visual effects
       setEffects(prev => {
         if (prev.length === 0) return prev;
         return prev.filter(e => currentTime - e.startTime < e.duration + 500);
@@ -154,20 +151,20 @@ const App = () => {
     setEffects(prev => [...prev, newEffect]);
 
     // Play Sound
-    setTimeout(() => {
-      try {
-        AudioService.getInstance().playLaserSound();
-      } catch (e) {
-        console.warn("Audio playback failed:", e);
-      }
-    }, 0);
+    try {
+      AudioService.getInstance().playLaserSound();
+    } catch (e) {
+      console.warn("Audio playback failed:", e);
+    }
 
-    // Execute the actual mint - success modal will show via useEffect when mintStatus === 'success'
+    // Wait for laser animation to complete before triggering wallet popup
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Execute the actual mint - wallet popup appears after animation
     await mint(region.name);
   };
 
   const onInfectComplete = useCallback((id: string) => {
-    // Only update visual state after laser animation - success modal is triggered by mintStatus
     if (mintStatus === 'success') {
       setTerritories(prev => ({
         ...prev,
@@ -180,14 +177,12 @@ const App = () => {
     }
   }, [mintStatus]);
 
-  // Handle closing success modal
   const handleCloseSuccessModal = useCallback(() => {
     setShowSuccessModal(false);
     setMintedRegion(null);
     resetMintStatus();
   }, [resetMintStatus]);
 
-  // Handle sharing after successful mint
   const handleShare = useCallback(() => {
     if (mintedRegion) {
       const txLink = lastTxHash ? `\n\nhttps://basescan.org/tx/${lastTxHash}` : '';
@@ -202,7 +197,6 @@ const App = () => {
   const activeRegion = selectedRegionId ? territories[selectedRegionId] : (hoveredRegionId ? territories[hoveredRegionId] : null);
   const mintPercent = ((totalSupply / maxSupply) * 100).toFixed(1);
 
-  // Button state
   const isExtracting = mintStatus === 'approving' || mintStatus === 'minting';
   const buttonDisabled = !selectedRegionId || walletStatus !== 'eligible' || isExtracting || !canMint || isSoldOut;
   
