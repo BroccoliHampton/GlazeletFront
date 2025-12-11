@@ -68,7 +68,7 @@ export const InfoPopup: React.FC<InfoPopupProps> = ({ onClose }) => {
         .filter((id): id is number => id !== null) || [];
 
     // Simple function to get image URL from token ID
-    const getImageUrl = (tokenId: number) => `${IPFS_BASE}/${tokenId - 1}.png`;
+    const getImageUrl = (tokenId: number) => `${IPFS_BASE}/${tokenId}.png`;
 
     const loading = isLoading || (supply > 0 && !ownersData);
 
