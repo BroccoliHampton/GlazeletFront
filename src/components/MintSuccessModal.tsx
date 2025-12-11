@@ -2,7 +2,6 @@ import React from 'react';
 import { Territory } from '../types';
 import { useGlazelets } from '../hooks/useGlazelets';
 
-// Update this to your new IPFS base URL
 const IPFS_BASE = 'https://ipfs.io/ipfs/bafybeihq3g6pg2nh4rvifpkvbjnvsvvdgyvaequhrmbnvyc42zxucdlqw4';
 
 interface MintSuccessModalProps {
@@ -15,51 +14,49 @@ interface MintSuccessModalProps {
 export const MintSuccessModal: React.FC<MintSuccessModalProps> = ({ region, txHash, onClose, onShare }) => {
     const { totalSupply } = useGlazelets();
     
-    // The token ID is the current totalSupply (just minted)
-    const tokenId = totalSupply;
+    // Token ID is totalSupply - 1 since IDs are 0-indexed and supply already incremented
+    const tokenId = totalSupply - 1;
     const imageUrl = `${IPFS_BASE}/${tokenId}.png`;
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="w-full max-w-[280px] bg-[#0a0a0a] border border-[#ec4899] rounded-xl shadow-[0_0_50px_rgba(236,72,153,0.3)] relative overflow-hidden">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+            <div className="w-full max-w-[300px] bg-[#0a0a0a] border border-[#ec4899] rounded-xl shadow-[0_0_50px_rgba(236,72,153,0.3)] relative overflow-hidden">
                 
                 {/* Close Button */}
                 <button 
                     onClick={onClose}
-                    className="absolute top-2 right-2 z-20 w-7 h-7 flex items-center justify-center rounded-full bg-black/80 text-white hover:bg-[#ec4899] transition-colors border border-[#333]"
+                    className="absolute top-2 right-2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/80 text-white hover:bg-[#ec4899] transition-colors border border-[#333]"
                 >
                     <i className="fa-solid fa-xmark text-sm"></i>
                 </button>
 
                 {/* Content */}
-                <div className="flex flex-col items-center text-center p-4 relative z-10">
+                <div className="flex flex-col items-center text-center p-5 relative z-10">
                     
                     {/* Success Header */}
-                    <div className="mb-3">
-                        <div className="text-[#ec4899] text-shadow-neon font-brand text-lg tracking-widest font-bold">
+                    <div className="mb-4">
+                        <div className="text-[#ec4899] text-shadow-neon font-brand text-xl tracking-widest font-bold">
                             MINT SUCCESS
                         </div>
                     </div>
 
                     {/* NFT Image */}
-                    <div className="relative w-36 h-36 mb-3 rounded-lg overflow-hidden border-2 border-[#ec4899] shadow-[0_0_20px_rgba(236,72,153,0.3)]">
+                    <div className="relative w-40 h-40 mb-4 rounded-lg overflow-hidden border-2 border-[#ec4899] shadow-[0_0_20px_rgba(236,72,153,0.3)]">
                         <img 
                             src={imageUrl} 
                             alt={`Glazelet #${tokenId}`}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                                // Fallback to checkmark if image fails
                                 (e.target as HTMLImageElement).style.display = 'none';
                             }}
                         />
-                        {/* Token ID badge */}
                         <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">
                             #{tokenId}
                         </div>
                     </div>
 
                     {/* Region Info */}
-                    <div className="bg-[#111] border border-[#333] rounded-lg p-2 w-full mb-3">
+                    <div className="bg-[#111] border border-[#333] rounded-lg p-3 w-full mb-3">
                         <div className="text-[9px] text-gray-500 uppercase font-tech mb-0.5">Origin</div>
                         <div className="text-white font-bold font-brand text-sm flex items-center justify-center gap-1">
                             <i className="fa-solid fa-location-dot text-[#ec4899] text-xs"></i>
