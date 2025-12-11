@@ -5,7 +5,7 @@ import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector'
 // Contract addresses
 export const CONTRACTS = {
   DONUT_TOKEN: '0xae4a37d554c6d6f3e398546d8566b25052e0169c',
-  GLAZELETS_NFT: '0xef5C67d9353fD3411e6e6b358A3dE162c2ABE0b3',
+  GLAZELETS_NFT: '0xea5c38aB557f0b7d1E0d96f3befB6c8C74148395',
   BURN_ADDRESS: '0x000000000000000000000000000000000000dEaD',
 } as const
 
