@@ -1,33 +1,36 @@
 <!doctype html>
 <html lang="en">
   <head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/donut.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#000000" />
-  <meta name="description" content="Glaze World - Mint your Glazelet NFT by burning DONUT tokens" />
-  
-  <!-- Open Graph -->
-  <meta property="og:title" content="Glaze World" />
-  <meta property="og:description" content="Extract your Glazelet NFT from the globe. Burn 69 DONUT to mint." />
-  <meta property="og:image" content="https://glazeworld.vercel.app/og-image.png" />
-  
-  <!-- Farcaster Mini App Embed -->
-  <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://glazeworld.vercel.app/og-image.png","button":{"title":"🍩 Extract Glazelet","action":{"type":"launch_miniapp","name":"Glaze World","url":"https://glazeworld.vercel.app","splashImageUrl":"https://glazeworld.vercel.app/splash.png","splashBackgroundColor":"#000000"}}}' />
-  
-  <!-- Farcaster Quick Auth preconnect -->
-  <link rel="preconnect" href="https://auth.farcaster.xyz" />
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  
-  <title>Glaze World</title>
-</head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/donut.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Glaze World - Mint your Glazelet NFT by burning DONUT tokens" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Glaze World" />
+    <meta property="og:description" content="Extract your Glazelet NFT from the globe. Burn 69 DONUT to mint." />
+    <meta property="og:image" content="https://glazelet-front.vercel.app/og-image.png" />
+    
+    <!-- Farcaster Mini App Embed (current format) -->
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://glazelet-front.vercel.app/og-image.png","button":{"title":"🍩 Extract Glazelet","action":{"type":"launch_miniapp","name":"Glaze World","url":"https://glazelet-front.vercel.app","splashImageUrl":"https://glazelet-front.vercel.app/splash.png","splashBackgroundColor":"#000000"}}}' />
+    
+    <!-- Farcaster Frame Embed (backward compatibility for some mobile clients) -->
+    <meta name="fc:frame" content='{"version":"1","imageUrl":"https://glazelet-front.vercel.app/og-image.png","button":{"title":"🍩 Extract Glazelet","action":{"type":"launch_frame","name":"Glaze World","url":"https://glazelet-front.vercel.app","splashImageUrl":"https://glazelet-front.vercel.app/splash.png","splashBackgroundColor":"#000000"}}}' />
+    
+    <!-- Farcaster Quick Auth preconnect -->
+    <link rel="preconnect" href="https://auth.farcaster.xyz" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <title>Glaze World</title>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
