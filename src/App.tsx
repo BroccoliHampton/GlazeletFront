@@ -3,6 +3,7 @@ import { useAccount, useConnect } from 'wagmi';
 import { Globe } from './components/Globe';
 import { InfoPopup } from './components/InfoPopup';
 import { MintSuccessModal } from './components/MintSuccessModal';
+import { PsychedelicFace } from './components/PsychedelicFace';
 import { RISK_REGIONS } from './constants';
 import { Territory, ViewMode, GameEffect } from './types';
 import { AudioService } from './services/audioService';
@@ -222,24 +223,18 @@ const App = () => {
       <div className="flex justify-center items-center h-screen bg-black text-gray-200 font-tech overflow-hidden select-none">
         <div className="w-full max-w-[420px] h-full max-h-[900px] bg-[#0a0a0a] flex flex-col items-center justify-center relative shadow-[0_0_50px_rgba(255,255,255,0.1)] overflow-hidden border border-[#333]">
           
-          {/* Animated background glow */}
-          <div className="absolute inset-0 bg-gradient-radial from-[#ec4899]/10 via-transparent to-transparent animate-pulse"></div>
-          
           {/* Logo */}
           <div className="relative z-10 flex flex-col items-center">
             <div className="text-5xl font-brand tracking-widest text-white text-shadow-white mb-2">
               GLAZELETS
             </div>
-            <div className="text-sm font-tech text-[#ec4899] tracking-[0.3em] uppercase mb-12">
+            <div className="text-sm font-tech text-[#ec4899] tracking-[0.3em] uppercase mb-8">
               by Glaze Corp.
             </div>
             
-            {/* Donut icon */}
-            <div className="w-32 h-32 mb-12 relative">
-              <div className="absolute inset-0 bg-[#ec4899]/20 rounded-full animate-ping"></div>
-              <div className="relative w-full h-full rounded-full border-4 border-[#ec4899] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                <span className="text-6xl">🍩</span>
-              </div>
+            {/* Psychedelic Face */}
+            <div className="mb-8">
+              <PsychedelicFace />
             </div>
 
             {/* Tagline */}
