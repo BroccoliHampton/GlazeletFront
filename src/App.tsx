@@ -80,7 +80,8 @@ const App = () => {
     if (isSDKLoaded) {
       // Only call ready() when we're actually in a miniapp
       if (isInMiniApp) {
-        farcasterReady();
+        // Disable native gestures to prevent swipe-down-to-close interfering with globe
+        farcasterReady({ disableNativeGestures: true });
       }
       
       if (isInMiniApp && !isConnected && connectors.length > 0) {
@@ -198,7 +199,7 @@ const App = () => {
       const txLink = lastTxHash ? `\n\nhttps://basescan.org/tx/${lastTxHash}` : '';
       composeCast(
         `🍩 Just extracted a Glazelet from ${mintedRegion.name}!${txLink}\n\nMint yours:`,
-        'https://glazeworld.vercel.app'
+        'https://glazelet-front.vercel.app'
       );
     }
   }, [mintedRegion, lastTxHash, composeCast]);
