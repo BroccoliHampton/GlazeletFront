@@ -7,6 +7,13 @@ interface FarcasterUser {
   pfpUrl?: string
 }
 
+interface FarcasterContext {
+  user?: FarcasterUser | null
+  client?: {
+    added?: boolean
+  } | null
+}
+
 interface FarcasterState {
   isSDKLoaded: boolean
   isInMiniApp: boolean
@@ -57,7 +64,7 @@ export function useFarcaster() {
         if (inMiniApp) {
           // Get context with timeout protection
           console.log('[Farcaster] Getting context...');
-          const context = await withTimeout(sdkInstance.context, 3000);
+          const context = await withTimeout(sdkInstance.context, 3000) as FarcasterContext;
           console.log('[Farcaster] Context received:', context?.user?.username);
           
           setState({
