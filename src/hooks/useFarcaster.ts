@@ -27,13 +27,24 @@ export function useFarcaster() {
 
   useEffect(() => {
     const initSDK = async () => {
+      // Timeout to prevent hanging on mobile
+      const timeoutMs = 3000;
+      const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => 
+            setTimeout(() => reject(new Error('SDK timeout')), ms)
+          )
+        ]);
+      };
+
       try {
-        // Check if we're in a Mini App context
-        const inMiniApp = await sdk.isInMiniApp()
+        // Race against timeout - mobile Warpcast can hang here
+        const inMiniApp = await timeout(sdk.isInMiniApp(), timeoutMs);
         
         if (inMiniApp) {
-          // Get context (user info, client info, etc.) - now async in v0.2.0
-          const context = await sdk.context
+          // Get context with timeout protection
+          const context = await timeout(sdk.context, timeoutMs);
           
           setState({
             isSDKLoaded: true,
@@ -41,89 +52,91 @@ export function useFarcaster() {
             user: context?.user ?? null,
             clientAdded: context?.client?.added ?? false,
             error: null,
-          })
+          });
         } else {
-          // Not in Mini App - could be testing in browser
+          // Not in Mini App - browser testing
           setState({
             isSDKLoaded: true,
             isInMiniApp: false,
             user: null,
             clientAdded: false,
             error: null,
-          })
+          });
         }
       } catch (err) {
-        console.error('Failed to initialize Farcaster SDK:', err)
-        setState(prev => ({
-          ...prev,
+        console.error('Failed to initialize Farcaster SDK:', err);
+        // IMPORTANT: Still mark as loaded so app renders even on error
+        setState({
           isSDKLoaded: true,
+          isInMiniApp: false,
+          user: null,
+          clientAdded: false,
           error: err instanceof Error ? err.message : 'Failed to initialize SDK',
-        }))
+        });
       }
-    }
+    };
 
-    initSDK()
-  }, [])
+    initSDK();
+  }, []);
 
   // Call this when your app UI is ready to display
-  const ready = useCallback(async () => {
-    if (state.isInMiniApp) {
-      try {
-        await sdk.actions.ready()
-      } catch (err) {
-        console.error('Failed to call ready:', err)
-      }
+  // No longer depends on state to avoid stale closure issues
+  const ready = useCallback(async (options?: { disableNativeGestures?: boolean }) => {
+    try {
+      await sdk.actions.ready(options);
+    } catch (err) {
+      console.error('Failed to call ready:', err);
     }
-  }, [state.isInMiniApp])
+  }, []);
 
   // Prompt user to add the Mini App
   const addMiniApp = useCallback(async () => {
-    if (!state.isInMiniApp) return
+    if (!state.isInMiniApp) return;
     try {
-      await sdk.actions.addMiniApp()
+      await sdk.actions.addMiniApp();
     } catch (err) {
-      console.error('Failed to add Mini App:', err)
+      console.error('Failed to add Mini App:', err);
     }
-  }, [state.isInMiniApp])
+  }, [state.isInMiniApp]);
 
   // Open cast composer with share content
   const composeCast = useCallback(async (text: string, embedUrl?: string) => {
     if (!state.isInMiniApp) {
       // Fallback for browser testing - open Warpcast intent
-      const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}${embedUrl ? `&embeds[]=${encodeURIComponent(embedUrl)}` : ''}`
-      window.open(url, '_blank')
-      return
+      const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}${embedUrl ? `&embeds[]=${encodeURIComponent(embedUrl)}` : ''}`;
+      window.open(url, '_blank');
+      return;
     }
     
     try {
       await sdk.actions.composeCast({
         text,
         embeds: embedUrl ? [embedUrl] : undefined,
-      })
+      });
     } catch (err) {
-      console.error('Failed to compose cast:', err)
+      console.error('Failed to compose cast:', err);
     }
-  }, [state.isInMiniApp])
+  }, [state.isInMiniApp]);
 
   // View a Farcaster profile
   const viewProfile = useCallback(async (fid: number) => {
-    if (!state.isInMiniApp) return
+    if (!state.isInMiniApp) return;
     try {
-      await sdk.actions.viewProfile({ fid })
+      await sdk.actions.viewProfile({ fid });
     } catch (err) {
-      console.error('Failed to view profile:', err)
+      console.error('Failed to view profile:', err);
     }
-  }, [state.isInMiniApp])
+  }, [state.isInMiniApp]);
 
   // Close the Mini App
   const close = useCallback(async () => {
-    if (!state.isInMiniApp) return
+    if (!state.isInMiniApp) return;
     try {
-      await sdk.actions.close()
+      await sdk.actions.close();
     } catch (err) {
-      console.error('Failed to close:', err)
+      console.error('Failed to close:', err);
     }
-  }, [state.isInMiniApp])
+  }, [state.isInMiniApp]);
 
   return {
     ...state,
@@ -132,5 +145,5 @@ export function useFarcaster() {
     composeCast,
     viewProfile,
     close,
-  }
+  };
 }
