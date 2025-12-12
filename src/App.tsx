@@ -78,7 +78,10 @@ const App = () => {
   // --- Initialize Farcaster SDK ---
   useEffect(() => {
     if (isSDKLoaded) {
-      farcasterReady();
+      // Only call ready() when we're actually in a miniapp
+      if (isInMiniApp) {
+        farcasterReady();
+      }
       
       if (isInMiniApp && !isConnected && connectors.length > 0) {
         connect({ connector: connectors[0] });
