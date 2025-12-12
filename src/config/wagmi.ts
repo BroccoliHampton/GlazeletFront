@@ -17,15 +17,25 @@ export const MINT_CONFIG = {
   MAX_PER_WALLET: 4,
 } as const
 
+// Safely create the Farcaster connector
+function createFarcasterConnector() {
+  try {
+    return farcasterMiniApp()
+  } catch (err) {
+    console.error('[Wagmi] Failed to create Farcaster connector:', err)
+    return null
+  }
+}
+
+const farcasterConnector = createFarcasterConnector()
+
 // Wagmi config with Farcaster Mini App connector
 export const config = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(),
   },
-  connectors: [
-    farcasterMiniApp(),
-  ],
+  connectors: farcasterConnector ? [farcasterConnector] : [],
 })
 
 // ERC20 ABI for DONUT token interactions
