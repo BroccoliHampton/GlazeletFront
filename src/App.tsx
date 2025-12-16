@@ -199,7 +199,7 @@ const App = () => {
       const txLink = lastTxHash ? `\n\nhttps://basescan.org/tx/${lastTxHash}` : '';
       composeCast(
         `🍩 Just extracted a Glazelet from ${mintedRegion.name}!${txLink}\n\nMint yours:`,
-        'https://glazelet-front.vercel.app'
+        'https://glazelet-front-v2.vercel.app'
       );
     }
   }, [mintedRegion, lastTxHash, composeCast]);
