@@ -5,10 +5,6 @@ import * as topojson from 'topojson-client';
 import { Territory, GlobeDot, GameEffect, ViewMode } from '../types';
 import { RISK_REGIONS, COLORS } from '../constants';
 
-interface RegionMintStats {
-  [regionId: string]: number;
-}
-
 interface GlobeProps {
     territories: Record<string, Territory>;
     zoom: number;
@@ -20,35 +16,6 @@ interface GlobeProps {
     onInfectComplete: (regionId: string) => void;
     selectedRegionId: string | null;
     transparentBackground?: boolean;
-    // Heatmap props
-    regionMintStats?: RegionMintStats;
-    maxMints?: number;
-}
-
-// Heatmap color interpolation: cold (dark gray) -> warm (pink) -> hot (white)
-function getHeatmapColor(count: number, maxCount: number): string {
-    if (maxCount === 0 || count === 0) {
-        return '#1a1a1a'; // No mints - dark gray
-    }
-    
-    const ratio = count / maxCount;
-    
-    // Color stops: 0% = dark gray, 50% = pink, 100% = white/hot pink
-    if (ratio < 0.5) {
-        // Interpolate from dark gray (#1a1a1a) to pink (#ec4899)
-        const t = ratio * 2; // 0 to 1
-        const r = Math.round(26 + (236 - 26) * t);
-        const g = Math.round(26 + (72 - 26) * t);
-        const b = Math.round(26 + (153 - 26) * t);
-        return `rgb(${r}, ${g}, ${b})`;
-    } else {
-        // Interpolate from pink (#ec4899) to hot white (#ffffff)
-        const t = (ratio - 0.5) * 2; // 0 to 1
-        const r = Math.round(236 + (255 - 236) * t);
-        const g = Math.round(72 + (255 - 72) * t);
-        const b = Math.round(153 + (255 - 153) * t);
-        return `rgb(${r}, ${g}, ${b})`;
-    }
 }
 
 export const Globe: React.FC<GlobeProps> = (props) => {
@@ -208,11 +175,7 @@ export const Globe: React.FC<GlobeProps> = (props) => {
 
         const render = () => {
             const now = Date.now();
-            const { 
-                territories, zoom, viewMode, effects, onInfectComplete, 
-                selectedRegionId, transparentBackground,
-                regionMintStats, maxMints 
-            } = propsRef.current;
+            const { territories, zoom, viewMode, effects, onInfectComplete, selectedRegionId, transparentBackground } = propsRef.current;
             const state = stateRef.current;
 
             const w = state.width;
@@ -289,19 +252,16 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                         let color = dot.baseColor; 
                         let size = 1.3 * zoom;
 
-                        // === VIEW MODE LOGIC ===
-                        if (viewMode === 'heatmap' && regionMintStats && maxMints !== undefined) {
-                            // HEATMAP MODE: Color by mint count
-                            const mintCount = regionMintStats[dot.regionId] || 0;
-                            color = getHeatmapColor(mintCount, maxMints);
-                            
-                            // Scale size slightly based on activity
-                            if (mintCount > 0 && maxMints > 0) {
-                                const ratio = mintCount / maxMints;
-                                size *= (1 + ratio * 0.5); // Up to 1.5x size for hottest
-                            }
+                        // View Mode Logic - simplified (minted view removed until real data)
+                        // Default territories view just uses baseColor
+
+                        // REMOVE PERMANENT PINK to allow fade effect
+                        /*
+                        if (isOwned && viewMode === 'territories') {
+                             color = COLORS.NEON_PINK;
+                             size *= 1.1;
                         }
-                        // Default territories view uses baseColor (already set)
+                        */
                         
                         ctx.shadowBlur = 0;
                         if (isOwned && viewMode === 'territories') {
@@ -317,20 +277,23 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                         }
 
                         // --- MINT FLASH EFFECT ---
+                        // Forces the region to solid PINK if recently minted, then fades back to base
                         if (rData.lastMintTime) {
                             const flashDuration = 3000;
                             const timeSince = now - rData.lastMintTime;
                             
                             if (timeSince < flashDuration) {
-                                const progress = timeSince / flashDuration;
-                                const intensity = 1 - progress;
+                                const progress = timeSince / flashDuration; // 0.0 to 1.0
+                                const intensity = 1 - progress; // 1.0 to 0.0
                                 
+                                // Deterministic fade:
                                 if (Math.random() < intensity) {
                                     color = COLORS.NEON_PINK;
                                     ctx.shadowColor = COLORS.NEON_PINK;
                                     ctx.shadowBlur = 20 * intensity;
                                 }
                                 
+                                // Pulse size
                                 size = size + (3 * intensity);
                             }
                         }
@@ -355,7 +318,7 @@ export const Globe: React.FC<GlobeProps> = (props) => {
 
             state.visibleDots = currentVisibleDots;
 
-            // Target Marker
+            // Target Marker (unchanged)
             if (selectedRegionId && territories[selectedRegionId]) {
                 const target = territories[selectedRegionId];
                 const radLam = (target.lon) * (Math.PI/180);
@@ -388,19 +351,11 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                     ctx.fillStyle = COLORS.WHITE;
                     ctx.shadowColor = COLORS.WHITE;
                     ctx.shadowBlur = 5;
-                    
-                    // Show mint count in heatmap mode
-                    let labelText = target.name.toUpperCase();
-                    if (viewMode === 'heatmap' && regionMintStats) {
-                        const count = regionMintStats[selectedRegionId] || 0;
-                        labelText += ` (${count} mints)`;
-                    }
-                    ctx.fillText(labelText, sx + size + 8, sy);
+                    ctx.fillText(target.name.toUpperCase(), sx + size + 8, sy);
                     ctx.restore();
                 }
             }
 
-            // Effects rendering (unchanged)
             const activeEffects = effects.filter(fx => now - fx.startTime < fx.duration);
             activeEffects.forEach(fx => {
                 const elapsed = now - fx.startTime;
@@ -538,6 +493,7 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                 const my = clientY - rect.top;
                 
                 let hoveredId: string | null = null;
+                // Use larger hit radius for hover
                 let minD = 60; 
                 
                 stateRef.current.visibleDots.forEach(d => {
@@ -556,9 +512,11 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                 return;
             }
 
+            // Drag logic
             const totalDx = Math.abs(clientX - stateRef.current.dragStartX);
             const totalDy = Math.abs(clientY - stateRef.current.dragStartY);
             
+            // Increased threshold to 10px to be more forgiving
             if (totalDx > 10 || totalDy > 10) {
                 stateRef.current.wasDrag = true;
                 if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
@@ -593,7 +551,7 @@ export const Globe: React.FC<GlobeProps> = (props) => {
                     const my = clientY - rect.top;
 
                     let clickedId: string | null = null;
-                    let minD = 60;
+                    let minD = 60; // 60px hit radius
 
                     stateRef.current.visibleDots.forEach(d => {
                         const dist = Math.sqrt((d.sx - mx)**2 + (d.sy - my)**2);
