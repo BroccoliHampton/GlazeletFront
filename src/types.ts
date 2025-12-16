@@ -1,7 +1,3 @@
-// Add 'heatmap' to your existing ViewMode type
-export type ViewMode = 'territories' | 'heatmap';
-
-// These should already exist in your types.ts - showing for reference:
 export interface Region {
   id: string;
   name: string;
@@ -11,8 +7,8 @@ export interface Region {
 
 export interface Territory extends Region {
   baseColor: string;
-  owner: string | null;
-  lastMintTime?: number;
+  owner: 'player' | null;
+  lastMintTime?: number; // For flash animation after successful mint
 }
 
 export interface GlobeDot {
@@ -24,10 +20,13 @@ export interface GlobeDot {
   sprinkleColor: string;
 }
 
+// Removed 'minted' view mode - will add back when hooked up to real data
+export type ViewMode = 'territories';
+
 export interface GameEffect {
   targetId: string;
   startTime: number;
   duration: number;
-  type: string;
+  type: 'laser';
   impacted: boolean;
 }
