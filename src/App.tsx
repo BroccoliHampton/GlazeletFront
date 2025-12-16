@@ -9,6 +9,7 @@ import { Territory, ViewMode, GameEffect } from './types';
 import { AudioService } from './services/audioService';
 import { useFarcaster } from './hooks/useFarcaster';
 import { useGlazelets } from './hooks/useGlazelets';
+import { useRegionMintStats } from './hooks/useRegionMintStats';
 
 const App = () => {
   // --- Welcome Screen State ---
@@ -41,10 +42,21 @@ const App = () => {
     reset: resetMintStatus,
   } = useGlazelets();
 
+  // --- Region Mint Stats for Heatmap ---
+  const { 
+    stats: regionMintStats, 
+    maxMints, 
+    isLoading: statsLoading,
+    refetch: refetchStats 
+  } = useRegionMintStats();
+
   // --- Game State ---
   const [showInfoPopup, setShowInfoPopup] = useState(false);
   const [mintedRegion, setMintedRegion] = useState<Territory | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // --- View Mode State ---
+  const [viewMode, setViewMode] = useState<ViewMode>('territories');
 
   // Derive wallet status from connection state
   const walletStatus: 'checking' | 'eligible' | 'denied' = 
@@ -68,7 +80,6 @@ const App = () => {
 
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const viewMode: ViewMode = 'territories';
   const [zoom, setZoom] = useState(1);
   const [effects, setEffects] = useState<GameEffect[]>([]);
   
@@ -94,8 +105,10 @@ const App = () => {
   useEffect(() => {
     if (mintStatus === 'success' && mintedRegion) {
       setShowSuccessModal(true);
+      // Refetch stats after successful mint
+      refetchStats();
     }
-  }, [mintStatus, mintedRegion]);
+  }, [mintStatus, mintedRegion, refetchStats]);
 
   // --- Game Loop (Effects Cleanup) ---
   useEffect(() => {
@@ -137,6 +150,11 @@ const App = () => {
       }
       setIsSoundEnabled(!musicMuted);
     }
+  };
+
+  // --- Toggle View Mode ---
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'territories' ? 'heatmap' : 'territories');
   };
 
   // --- Gameplay Actions ---
@@ -280,6 +298,15 @@ const App = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Heatmap Toggle Button */}
+            <button 
+              onClick={toggleViewMode}
+              className={`transition-colors text-xl ${viewMode === 'heatmap' ? 'text-[#ec4899]' : 'text-gray-600 hover:text-[#ec4899]'}`}
+              title={viewMode === 'heatmap' ? 'Show Territories' : 'Show Heatmap'}
+            >
+              <i className={`fa-solid ${viewMode === 'heatmap' ? 'fa-fire' : 'fa-map'}`}></i>
+            </button>
+
             <button 
               onClick={() => setShowInfoPopup(!showInfoPopup)}
               className={`transition-colors text-xl ${showInfoPopup ? 'text-[#ec4899]' : 'text-gray-600 hover:text-[#ec4899]'}`}
@@ -331,15 +358,28 @@ const App = () => {
           </div>
         )}
         
-        {/* Instruction Banner - hide when info popup or success modal is showing */}
+        {/* Instruction Banner / Heatmap Info - hide when info popup or success modal is showing */}
         {!showInfoPopup && !showSuccessModal && (
           <div className="px-4 relative z-40 shrink-0">
             <div className="bg-[#111] border border-[#333] rounded p-3 mt-3 shadow-inner shadow-black flex items-center justify-center h-20 text-center relative overflow-hidden group">
               <div className="absolute inset-0 bg-[#ec4899]/5 opacity-0 group-hover:opacity-10 transition-opacity"></div>
-              <i className="fa-solid fa-circle-info text-[#ec4899] text-lg mr-3 animate-pulse"></i>
-              <div className="font-brand text-white text-xs sm:text-sm tracking-widest uppercase leading-relaxed">
-                Choose a region to extract <br/> your <span className="text-[#ec4899] text-shadow-neon font-bold">Glazelet</span> from below...
-              </div>
+              
+              {viewMode === 'territories' ? (
+                <>
+                  <i className="fa-solid fa-circle-info text-[#ec4899] text-lg mr-3 animate-pulse"></i>
+                  <div className="font-brand text-white text-xs sm:text-sm tracking-widest uppercase leading-relaxed">
+                    Choose a region to extract <br/> your <span className="text-[#ec4899] text-shadow-neon font-bold">Glazelet</span> from below...
+                  </div>
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-fire text-[#ec4899] text-lg mr-3"></i>
+                  <div className="font-brand text-white text-xs sm:text-sm tracking-widest uppercase leading-relaxed">
+                    <span className="text-[#ec4899] text-shadow-neon font-bold">HEATMAP MODE</span><br/>
+                    {statsLoading ? 'Loading mint data...' : `Showing ${Object.values(regionMintStats).reduce((a, b) => a + b, 0)} mints`}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -356,6 +396,8 @@ const App = () => {
             onSelect={handleMapSelect}
             onInfectComplete={onInfectComplete}
             selectedRegionId={selectedRegionId}
+            regionMintStats={regionMintStats}
+            maxMints={maxMints}
           />
 
           {/* Overlays */}
@@ -367,6 +409,27 @@ const App = () => {
               onClose={handleCloseSuccessModal}
               onShare={handleShare}
             />
+          )}
+
+          {/* Heatmap Legend - show only in heatmap mode */}
+          {viewMode === 'heatmap' && !showSuccessModal && (
+            <div className="absolute left-2 top-4 bg-black/90 border border-[#333] rounded p-2 z-20 backdrop-blur-sm">
+              <div className="text-[9px] text-gray-400 uppercase tracking-widest mb-2 font-bold">Mint Activity</div>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ background: '#ffffff' }}></div>
+                  <span className="text-[10px] text-white">Hot</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ background: '#ec4899' }}></div>
+                  <span className="text-[10px] text-gray-400">Medium</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ background: '#1a1a1a', border: '1px solid #333' }}></div>
+                  <span className="text-[10px] text-gray-600">None</span>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Zoom Slider - hide when success modal is showing */}
@@ -390,9 +453,15 @@ const App = () => {
           {activeRegion && !showSuccessModal && (
             <div className="absolute top-4 left-4 z-30 bg-black/90 border border-[#ec4899] p-2 rounded backdrop-blur-md text-xs font-tech pointer-events-none shadow-[0_0_15px_rgba(236,72,153,0.3)]">
               <div className="text-white font-bold uppercase tracking-widest mb-1">{activeRegion.name}</div>
-              <div className={`text-[#ec4899] ${selectedRegionId === activeRegion.id ? 'animate-pulse font-bold' : ''}`}>
-                {selectedRegionId === activeRegion.id ? 'READY TO EXTRACT' : 'SCANNING...'}
-              </div>
+              {viewMode === 'heatmap' ? (
+                <div className="text-[#ec4899]">
+                  {regionMintStats[activeRegion.id] || 0} MINTS
+                </div>
+              ) : (
+                <div className={`text-[#ec4899] ${selectedRegionId === activeRegion.id ? 'animate-pulse font-bold' : ''}`}>
+                  {selectedRegionId === activeRegion.id ? 'READY TO EXTRACT' : 'SCANNING...'}
+                </div>
+              )}
             </div>
           )}
 
