@@ -54,17 +54,20 @@ const App = () => {
 
   // Initialize Territories
   const [territories, setTerritories] = useState<Record<string, Territory>>(() => {
-    const initial: Record<string, Territory> = {};
-    RISK_REGIONS.forEach((r) => {
-      const lightness = Math.floor(Math.random() * 40) + 20;
-      initial[r.id] = {
-        ...r,
-        baseColor: `hsl(0, 0%, ${lightness}%)`,
-        owner: null,
-      };
-    });
-    return initial;
+  const initial: Record<string, Territory> = {};
+  RISK_REGIONS.forEach((r) => {
+    // Pink spectrum: hue 330-350, varying saturation and lightness
+    const hue = 330 + Math.floor(Math.random() * 20); // 330-350 (pink range)
+    const saturation = 25 + Math.floor(Math.random() * 35); // 25-60%
+    const lightness = 45 + Math.floor(Math.random() * 30); // 45-75%
+    initial[r.id] = {
+      ...r,
+      baseColor: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
+      owner: null,
+    };
   });
+  return initial;
+});
 
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
